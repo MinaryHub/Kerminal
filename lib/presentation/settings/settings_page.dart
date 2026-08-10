@@ -123,8 +123,7 @@ class SettingsPage extends ConsumerWidget {
 /// Deliberately gives nothing back: Microsoft Store policy 10.8.x allows a
 /// third-party payment page for voluntary donations, but requires the Store's
 /// in-app purchase API the moment a donation grants any digital good — a
-/// feature, a badge, removing ads. Saying so plainly also sets expectations, and
-/// this app is already paid for on some platforms.
+/// feature, a badge, removing ads. Saying so plainly also sets expectations.
 class _DonationSection extends StatelessWidget {
   const _DonationSection();
 
