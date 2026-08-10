@@ -3,6 +3,18 @@
 All notable changes to Kerminal are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow semver.
 
+## [1.1.0]
+
+### Added
+- **후원(도네이션) 링크** — 설정 → **Support development**. 외부 결제 페이지로
+  연결되며, **아무것도 잠금 해제하지 않습니다** — 후원 여부와 무관하게 앱은 완전히
+  동일합니다. 화면에도 그렇게 적었습니다.
+  - Microsoft Store 정책 10.8.x는 자발적 기부를 제3자 결제로 받는 것을 허용하지만,
+    **대가로 기능·배지·광고 제거 등을 주면 Store IAP가 의무**입니다. 그래서 어떤 혜택도
+    연결하지 않았습니다(나중에 혜택을 붙이면 IAP로 전환해야 합니다).
+  - 후원 URL이 설정되지 않은 빌드에서는 이 섹션이 **표시되지 않습니다** — 죽은 링크가
+    나가지 않도록 했습니다.
+
 ## [1.0.3]
 
 ### Changed
