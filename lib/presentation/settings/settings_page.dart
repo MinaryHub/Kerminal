@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../application/account_providers.dart';
+import '../../core/donation_config.dart';
 import '../../application/providers.dart';
 import '../../application/settings.dart';
 import '../../data/crypto/backup_crypto.dart';
@@ -100,8 +101,62 @@ class SettingsPage extends ConsumerWidget {
           Text('Support', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           const _SupportSection(),
+          // Hidden entirely when no donation page is configured, so a build
+          // without one never shows a dead link.
+          if (DonationConfig.isConfigured) ...[
+            const SizedBox(height: 28),
+            Text(
+              'Support development',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            const _DonationSection(),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// Optional, no-strings-attached donation link.
+///
+/// Deliberately gives nothing back: Microsoft Store policy 10.8.x allows a
+/// third-party payment page for voluntary donations, but requires the Store's
+/// in-app purchase API the moment a donation grants any digital good — a
+/// feature, a badge, removing ads. Saying so plainly also sets expectations, and
+/// this app is already paid for on some platforms.
+class _DonationSection extends StatelessWidget {
+  const _DonationSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Kerminal is built and maintained by one person. If it saves you '
+          'time, you can chip in — entirely optional, and it unlocks nothing: '
+          'the app is exactly the same either way.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final uri = Uri.parse(DonationConfig.url);
+            // Opens the payment provider's own page, which handles identifying
+            // itself and confirming the amount — the app never sees card data.
+            final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+            if (!ok) {
+              messenger.showSnackBar(
+                SnackBar(content: Text('Could not open ${DonationConfig.url}')),
+              );
+            }
+          },
+          icon: const Icon(Icons.favorite_outline),
+          label: const Text('Support development…'),
+        ),
+      ],
     );
   }
 }
