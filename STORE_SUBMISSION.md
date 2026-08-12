@@ -47,6 +47,11 @@ Kerminal의 Microsoft Store(파트너 센터) 제출 화면에 그대로 붙여�
 
 ### (2-1) 스토어용 패키지 만드는 법
 
+> ⚠️ **릴리스 페이지의 `kerminal.msix`를 올리면 반려됩니다.** 그것은 사이드로딩용이라
+> 버전이 `X.Y.Z.빌드번호`(예: `1.0.3.47`)이고 identity·게시자도 다릅니다. 실제로 이
+> 실수로 두 번 반려됐습니다. 스토어용 파일은 이름이 **`kerminal-store.msix`** 이고
+> 버전의 마지막 자리가 **`0`** 입니다.
+
 MSIX는 **Windows에서만** 빌드됩니다. 맥/리눅스만 쓴다면 GitHub Actions의
 **Store package (MSIX)** 워크플로를 Actions 탭에서 `Run workflow`로 실행하세요
 (`.github/workflows/store-package.yml`). 위 표의 세 값 + 버전을 입력받아 서명 없는
