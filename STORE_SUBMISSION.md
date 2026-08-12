@@ -265,16 +265,24 @@ Windows · macOS · Linux · Android · iOS 동일 사용 경험
 - 동기화·저장된 자격증명 관련 안정성 수정
 ```
 
-### 검색어 (최대 7개 · 각 30자, 비공개)
+### 검색어 (최대 7개 · 비공개)
+
+> ⚠️ **다른 제품의 이름을 넣으면 반려됩니다** (정책 10.1.3). 실제로
+> `putty alternative` 때문에 반려된 적이 있습니다 — "Problematic Keyword(s): Putty".
+> 경쟁 제품명(PuTTY, Termius, MobaXterm …)은 **비교 목적이라도** 쓸 수 없습니다.
+> 자기가 게시한 제품의 이름만 허용됩니다.
+>
+> 정책 요건: **고유 용어 7개 이하**, **제품과 실제로 관련**, 타 제품명 금지.
+> 파트너 센터 UI가 더 관대해 보여도 정책이 우선합니다.
 
 ```
 ssh
 ssh 클라이언트
+sftp
 터미널
-remote shell
+secure shell
 서버 관리
-ssh client
-terminal emulator
+원격 접속
 ```
 
 ### 저작권 및 상표 정보 (최대 200자)
@@ -382,14 +390,17 @@ encrypted backups and optional end-to-end encrypted sync.
 
 ### Search terms
 
+Same rule as above — no other product's name, seven unique terms at most, all
+actually relevant to Kerminal.
+
 ```
 ssh
 ssh client
-terminal
-remote shell
-server admin
-putty alternative
+sftp
 terminal emulator
+secure shell
+remote server
+server management
 ```
 
 ---
@@ -523,5 +534,6 @@ the user initiates plus the two HTTPS endpoints above.
 - [ ] `dart run msix:create --store --version 1.0.0.0 ...` 로 패키지 생성 (§0-2)
 - [ ] 가격/시장/속성/연령 등급 입력 (§2~4)
 - [ ] 등록 정보 ko-KR + en-US 입력 (§5, §6)
+- [ ] **검색어에 타 제품명이 없는지 확인** — 정책 10.1.3, 실제 반려 사유였음
 - [ ] 인증 메모 붙여넣기 (§9)
 - [ ] 제출
