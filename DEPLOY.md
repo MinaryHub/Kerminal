@@ -67,11 +67,11 @@ dart run msix:create        # → build/windows/x64/runner/Release/*.msix
     ```powershell
     Import-Certificate -FilePath .\kerminal-codesign.cer -CertStoreLocation Cert:\LocalMachine\Root
     ```
-    그런 다음 `kerminal.msix` 실행 → 게시자가 "Minary"로 확인되어 설치됩니다.
+    그런 다음 `kerminal-sideload.msix` 실행 → 게시자가 "Minary"로 확인되어 설치됩니다.
     (GUI로는 .cer 우클릭 → 인증서 설치 → 로컬 컴퓨터 → "신뢰할 수 있는 루트 인증 기관".)
 - **정식 서명/스토어:** 상용 Authenticode(OV/EV) 인증서로 교체하거나 Microsoft Store
   제출(`dart run msix:create --store`, 파트너 센터 계정) 시 경고 없이 설치됩니다.
-  - 태그 릴리스에 붙는 `kerminal.msix`는 **직접 배포 전용**입니다. 스토어는 이 패키지의
+  - 태그 릴리스에 붙는 `kerminal-sideload.msix`는 **직접 배포 전용**입니다. 스토어는 이 패키지의
     identity·게시자·버전(4번째 자리)을 모두 거부하므로, 제출본은 Actions의
     **Store package (MSIX)** 워크플로(`.github/workflows/store-package.yml`)로 따로
     만드세요. 입력값과 제출 절차는 [STORE_SUBMISSION.md](STORE_SUBMISSION.md) 참고.
