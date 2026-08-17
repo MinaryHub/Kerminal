@@ -41,9 +41,25 @@ GitHub은 모든 릴리스에 "Source code (zip / tar.gz)"를 강제로 붙이�
 `release.yml`의 `release` 잡이 `softprops/action-gh-release`에 `repository`와
 `token`을 넘깁니다. `GITHUB_TOKEN`은 자기 저장소에만 쓸 수 있어 **PAT가 필요합니다**:
 
-- fine-grained PAT, `knoxxr/kerminal`만, **Contents: Read and write**
+- fine-grained PAT, **`knoxxr/kerminal`**(공개 저장소)만, **Contents: Read and write**
 - 비공개 저장소 시크릿 **`RELEASE_PAT`** 로 등록
-- 없으면 워크플로가 즉시 실패합니다(조용히 비공개 저장소에 게시되는 것을 막기 위함)
+
+`preflight` 잡이 빌드 **전에** 토큰을 검사합니다(`repos/{공개저장소}` 의
+`permissions.push`). 처음 구성할 때 이 검사가 없어 5개 플랫폼을 다 빌드한 뒤
+게시 단계에서 403이 났고, 비공개 저장소라 그 시간이 그대로 청구됐습니다.
+
+토큰 오류 두 가지가 흔합니다:
+
+| 증상 | 원인 |
+|---|---|
+| `cannot read` (404) | 토큰 범위를 **비공개 저장소**로 잡았다 — 공개 저장소여야 합니다 |
+| `permissions.push=false` | Contents 가 Read-only |
+
+빌드는 성공했고 게시만 실패했다면 아티팩트가 남아 있으므로 재빌드가 필요 없습니다:
+
+```bash
+gh run rerun <run-id> --failed
+```
 
 릴리스 노트는 이 저장소의 `CHANGELOG.md`에서 해당 버전 절을 잘라 씁니다.
 `generate_release_notes`는 껐습니다 — 공개 저장소의 커밋(문서 3개)을 요약할 뿐입니다.
