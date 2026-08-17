@@ -6,6 +6,8 @@ on:
   # No branch filter: a PR targeting a feature branch (stacked work) would
   # otherwise merge with no verification at all.
   pull_request:
+  # Runs the desktop builds too — see `build-desktop` below.
+  workflow_dispatch:
 
 jobs:
   analyze-and-test:
@@ -39,6 +41,7 @@ jobs:
       - name: Run tests
         run: flutter test
 
+  # Runs on every push and PR. Linux runners are billed 1x.
   build:
     name: Build ${{ matrix.target }}
     needs: analyze-and-test
@@ -52,6 +55,37 @@ jobs:
           - os: ubuntu-latest
             target: apk
             build: flutter build apk --release
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: dart run build_runner build
+      - run: dart run flutter_launcher_icons
+      - run: ${{ matrix.build }}
+
+  # Manual only. This repo is private, where Actions minutes are metered and
+  # multiplied by runner OS: Windows 2x, macOS 10x. A ~12-minute macOS build is
+  # billed as ~120 minutes, so running these on every PR burned the whole
+  # 2,000-minute monthly allowance in about a dozen runs.
+  #
+  # Desktop compilation is still verified — the release workflow builds Windows
+  # and macOS for real on every tag. Run this job by hand (Actions → CI → Run
+  # workflow) before tagging if a change touches desktop-specific code:
+  # platform channels, window setup, file pickers, path handling.
+  build-desktop:
+    name: Build ${{ matrix.target }} (manual)
+    needs: analyze-and-test
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
           - os: windows-latest
             target: windows
             build: flutter build windows --release
