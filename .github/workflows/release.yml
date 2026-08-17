@@ -187,17 +187,46 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    # Releases are published to the PUBLIC repo, not this one. This repo is
+    # private (the source is not published), but three URLs must stay reachable
+    # without authentication:
+    #
+    #   PUBLIC_REPO/releases/latest/download/latest.json   in-app update check
+    #   PUBLIC_REPO/blob/main/PRIVACY.md                   MS Store policy 10.5.1
+    #   PUBLIC_REPO/issues                                 in-app "Report an issue"
+    #
+    # The public repo kept the original name, so already-installed apps and the
+    # Store listing need no change. Cross-repo publishing needs a PAT —
+    # GITHUB_TOKEN is scoped to this repo only.
+    env:
+      PUBLIC_REPO: knoxxr/kerminal
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
+      - name: Check RELEASE_PAT is present
+        # Without it the release would silently land in the private repo, where
+        # nobody can download it. Fail loudly instead.
+        env:
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+        run: |
+          if [ -z "$RELEASE_PAT" ]; then
+            echo "::error::RELEASE_PAT is not set. Create a fine-grained PAT for ${PUBLIC_REPO} (Contents: read and write) and store it as RELEASE_PAT."
+            exit 1
+          fi
+
       # Generate the update manifest describing THIS release. The app polls
       # releases/latest/download/latest.json, so older versions detect it.
+      # BASE points at the PUBLIC repo — github.repository is the private one.
       - name: Generate latest.json
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          BASE="${{ github.server_url }}/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
+          BASE="${{ github.server_url }}/${PUBLIC_REPO}/releases/download/${GITHUB_REF_NAME}"
           cat > latest.json <<EOF
           {
             "version": "${VERSION}",
@@ -212,10 +241,49 @@ jobs:
           EOF
           cat latest.json
 
+      # Release notes come from CHANGELOG.md in THIS repo. `generate_release_notes`
+      # is off on purpose: it would summarise the *public* repo's commits, which
+      # only ever contains three documents.
+      - name: Extract this version's CHANGELOG section
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { inside = 1; next }
+            inside && /^## \[/ { exit }
+            inside { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "No CHANGELOG section for ${VERSION}; falling back to a generic note." >&2
+            printf 'Kerminal %s.\n' "$VERSION" > notes.md
+          fi
+          cat notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
-          generate_release_notes: true
+          repository: ${{ env.PUBLIC_REPO }}
+          token: ${{ secrets.RELEASE_PAT }}
+          tag_name: ${{ github.ref_name }}
+          name: Kerminal ${{ github.ref_name }}
+          body_path: notes.md
           files: |
             artifacts/**/*
             latest.json
+
+      # The privacy policy is a Store compliance document served from the public
+      # repo. If it changes here, the public copy must follow or the submitted
+      # URL shows a stale policy.
+      - name: Sync PRIVACY.md to the public repo
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${PUBLIC_REPO}.git" public
+          cp PRIVACY.md public/PRIVACY.md
+          cd public
+          if git diff --quiet; then
+            echo "PRIVACY.md already up to date."
+            exit 0
+          fi
+          git -c user.name=github-actions -c user.email=github-actions@github.com \
+            commit -qam "docs: PRIVACY.md 동기화 (${GITHUB_REF_NAME})"
+          git push -q
