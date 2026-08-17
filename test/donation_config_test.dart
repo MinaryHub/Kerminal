@@ -2,11 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kerminal/core/donation_config.dart';
 
 void main() {
-  test('an unconfigured build reports no donation page', () {
+  test('the default build points at the sponsors page', () {
     // Tests run without --dart-define, so this is the default build. The
-    // settings section keys off this: no URL, no section, no dead link.
-    expect(DonationConfig.url, isEmpty);
-    expect(DonationConfig.isConfigured, isFalse);
+    // settings section keys off `isConfigured`, so a typo here would silently
+    // hide the section in every release.
+    expect(DonationConfig.url, 'https://github.com/sponsors/knoxxr');
+    expect(DonationConfig.isConfigured, isTrue);
+  });
+
+  test('the default URL survives the usability check', () {
+    // Guards against a future edit putting a mailto: or scheme-less value in
+    // `defaultValue`, which would render a button that opens nothing.
+    expect(DonationConfig.hasUsableUrl(DonationConfig.url), isTrue);
   });
 
   group('hasUsableUrl', () {

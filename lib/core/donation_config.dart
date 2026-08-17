@@ -20,9 +20,10 @@ class DonationConfig {
 
   static const url = String.fromEnvironment(
     'DONATION_URL',
-    // Public information, not a secret — fine to hard-code. Left empty until a
-    // donation page exists.
-    defaultValue: '',
+    // Public information, not a secret — fine to hard-code. GitHub Sponsors was
+    // approved and the page is public, so the section is on by default. Pass an
+    // empty --dart-define=DONATION_URL= to build without it.
+    defaultValue: 'https://github.com/sponsors/knoxxr',
   );
 
   /// Whether this build has somewhere to send donors.

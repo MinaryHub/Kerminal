@@ -26,6 +26,13 @@
 > 자동으로 빌드해 **드래프트 릴리스**에 첨부합니다. 앱은 [`latest.json`](DEPLOY.md#자동-업데이트-버전-인식--다운로드-안내)
 > 매니페스트로 새 버전을 감지합니다.
 
+## 후원
+
+[GitHub Sponsors](https://github.com/sponsors/knoxxr) — 앱 안에서는 설정 →
+**Support development**. 대가는 없습니다(정책 10.8.x: 혜택을 주면 Store IAP 의무).
+후원 URL 은 [`lib/core/donation_config.dart`](lib/core/donation_config.dart) 에
+있으며, `--dart-define=DONATION_URL=` 를 비워 빌드하면 섹션이 숨겨집니다.
+
 ## 기술 스택
 
 | 영역 | 패키지 |
