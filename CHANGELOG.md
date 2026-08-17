@@ -3,6 +3,18 @@
 All notable changes to Kerminal are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow semver.
 
+## [1.1.2]
+
+### Changed
+- **소스 저장소를 비공개로 전환했습니다.** 사용자 입장에서 바뀌는 것은 없습니다 —
+  다운로드 주소, 인앱 업데이트, 문의 링크가 모두 이전과 **같은 URL** 로 동작합니다.
+  릴리스는 공개 저장소 `knoxxr/kerminal` 로 게시되고, 소스는 비공개
+  `knoxxr/kerminal-app` 에 있습니다.
+  - 이미 설치된 버전의 업데이트 확인도 그대로 동작합니다(같은 `latest.json` 주소).
+  - 릴리스 노트가 이제 CHANGELOG 에서 자동으로 채워집니다.
+
+앱 코드 변경은 없습니다 — 1.1.1 과 동일한 바이너리이며 배포 경로만 바뀌었습니다.
+
 ## [1.1.1]
 
 ### Changed
