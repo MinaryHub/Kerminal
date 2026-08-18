@@ -3,6 +3,18 @@
 All notable changes to Kerminal are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow semver.
 
+## [1.2.0]
+
+### Added
+- **후원 링크를 켰습니다** — 설정 → **Support development**. GitHub Sponsors 페이지가
+  열립니다.
+  - **아무것도 잠금 해제하지 않습니다.** 후원 여부와 무관하게 앱은 완전히 동일하며,
+    화면에도 그렇게 적어 뒀습니다. 기능·배지·광고 제거 같은 대가를 붙이면 Microsoft
+    Store 정책 10.8.x 상 Store 결제(IAP)가 의무가 되므로, 의도적으로 아무 혜택도
+    연결하지 않았습니다.
+  - 결제는 GitHub 페이지에서 처리됩니다 — 앱은 카드 정보를 보지 않습니다.
+  - 1.1.0 에서 만들어 뒀지만 후원 페이지가 없어 숨겨져 있던 섹션입니다. 이제 보입니다.
+
 ## [1.1.2]
 
 ### Changed
