@@ -3,6 +3,16 @@
 All notable changes to Kerminal are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow semver.
 
+## [1.2.1]
+
+### Changed
+- **개인정보처리방침의 문의 경로를 바꿨습니다.** 개인 메일 주소 대신 앱 내
+  **설정 → Support → Contact us** 와 GitHub Issues 를 안내합니다. 계정 삭제 요청도
+  같은 경로입니다(앱을 이미 삭제하셨다면 Issues).
+
+앱 코드 변경은 없습니다 — 1.2.0 과 동일한 바이너리입니다. 방침 문서는 앱에 포함되지
+않고 웹에서 제공되므로, 이 수정은 릴리스와 무관하게 이미 적용돼 있습니다.
+
 ## [1.2.0]
 
 ### Added
