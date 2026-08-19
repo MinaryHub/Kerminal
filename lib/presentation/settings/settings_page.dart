@@ -323,7 +323,7 @@ class _SupportSection extends ConsumerWidget {
             if (canSend) const SizedBox(width: 12),
             OutlinedButton.icon(
               onPressed: () => launchUrl(
-                Uri.parse('https://github.com/knoxxr/kerminal/issues'),
+                Uri.parse('https://github.com/MinaryHub/kerminal/issues'),
                 mode: LaunchMode.externalApplication,
               ),
               icon: const Icon(Icons.bug_report_outlined),

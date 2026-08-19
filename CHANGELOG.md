@@ -3,6 +3,18 @@
 All notable changes to Kerminal are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow semver.
 
+## [1.2.2]
+
+### Changed
+- **프로젝트가 `MinaryHub` 조직으로 이전했습니다.** 다운로드·문의·정책 문서 주소가
+  `github.com/MinaryHub/kerminal` 로 바뀌었습니다. 예전 주소는 GitHub 리다이렉트로
+  계속 동작하므로 **이미 설치된 앱의 업데이트 확인도 그대로 됩니다.**
+- **후원 섹션이 다시 숨겨졌습니다.** 조직은 아직 후원을 받을 수 없고(별도 심사 필요),
+  개인 계정 페이지를 그대로 쓰면 조직으로 옮긴 이유가 없어지기 때문입니다. 조직
+  리스팅이 승인되면 다시 나타납니다.
+
+앱 코드에서 바뀐 것은 업데이트 확인 주소와 "Report an issue" 링크뿐입니다.
+
 ## [1.2.1]
 
 ### Changed
