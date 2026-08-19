@@ -3,7 +3,7 @@
 **최종 수정일 / Last updated: 2026-08-19**
 **제공자 / Provider: Minary**
 문의 / Contact: 앱 내 **설정 → Support → Contact us** ·
-[GitHub Issues](https://github.com/knoxxr/kerminal/issues)
+[GitHub Issues](https://github.com/MinaryHub/kerminal/issues)
 
 ---
 
@@ -43,7 +43,7 @@ SSH 연결은 사용자가 지정한 서버로 **직접** 이루어집니다. Mi
 ### 4. 업데이트 확인
 
 새 버전 확인을 위해 GitHub에 공개된 버전 매니페스트
-(`https://github.com/knoxxr/kerminal/releases/latest/download/latest.json`)를 HTTPS로 요청합니다.
+(`https://github.com/MinaryHub/kerminal/releases/latest/download/latest.json`)를 HTTPS로 요청합니다.
 이 요청에는 개인 식별 정보가 포함되지 않으며, 요청 과정에서 발생하는 IP 주소 등의
 접속 정보는 GitHub가 자체 방침에 따라 처리합니다.
 
@@ -84,7 +84,7 @@ Minary와 인프라 제공자는 호스트 주소·사용자명·비밀번호·�
   앱 내에서 호스트를 개별 삭제할 수도 있습니다.
 - **계정 데이터:** 계정 삭제를 원하시면 앱 내 **설정 → Support → Contact us** 로
   요청해 주십시오. 앱을 이미 삭제하셨다면
-  [GitHub Issues](https://github.com/knoxxr/kerminal/issues)에 남겨 주시면 됩니다.
+  [GitHub Issues](https://github.com/MinaryHub/kerminal/issues)에 남겨 주시면 됩니다.
   본인 확인 후 계정과 연결된 프로필·키·호스트 암호문·이력을 모두 삭제합니다.
 - 열람·정정·삭제·처리정지 요구는 같은 주소로 접수합니다.
 
@@ -101,7 +101,7 @@ Kerminal은 서버 관리자를 위한 개발자 도구로, 아동을 대상으�
 ### 10. 문의
 
 Minary · 앱 내 **설정 → Support → Contact us** ·
-https://github.com/knoxxr/kerminal/issues
+https://github.com/MinaryHub/kerminal/issues
 
 ---
 
@@ -138,7 +138,7 @@ through Minary, and terminal input/output is never collected, transmitted, or st
 ### 4. Update check
 
 The app fetches a public version manifest over HTTPS from GitHub
-(`https://github.com/knoxxr/kerminal/releases/latest/download/latest.json`).
+(`https://github.com/MinaryHub/kerminal/releases/latest/download/latest.json`).
 No personal data is included; connection data such as your IP address is handled
 by GitHub under its own policy.
 
@@ -190,4 +190,4 @@ release notes.
 ### 10. Contact
 
 Minary · 앱 내 **설정 → Support → Contact us** ·
-https://github.com/knoxxr/kerminal/issues
+https://github.com/MinaryHub/kerminal/issues

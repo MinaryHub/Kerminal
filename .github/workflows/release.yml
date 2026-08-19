@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     env:
-      PUBLIC_REPO: knoxxr/kerminal
+      PUBLIC_REPO: MinaryHub/kerminal
     steps:
       - name: RELEASE_PAT can write to the public repo
         env:
@@ -35,7 +35,7 @@ jobs:
           # `permissions.push` is what the releases API checks. A token scoped to
           # the wrong repository 404s here; one with Contents:read reports false.
           if ! perms=$(gh api "repos/${PUBLIC_REPO}" --jq '.permissions.push' 2>&1); then
-            echo "::error::RELEASE_PAT cannot read ${PUBLIC_REPO}. Check that the token's repository access includes it (not the private source repo). API said: ${perms}"
+            echo "::error::RELEASE_PAT cannot read ${PUBLIC_REPO}. The token's Resource owner must be the MinaryHub organization (a personal-account PAT cannot reach org repos), and its repository access must include ${PUBLIC_REPO} — not the private source repo. API said: ${perms}"
             exit 1
           fi
           if [ "$perms" != "true" ]; then
@@ -237,7 +237,7 @@ jobs:
     # Store listing need no change. Cross-repo publishing needs a PAT —
     # GITHUB_TOKEN is scoped to this repo only.
     env:
-      PUBLIC_REPO: knoxxr/kerminal
+      PUBLIC_REPO: MinaryHub/kerminal
     steps:
       - uses: actions/checkout@v4
         with:

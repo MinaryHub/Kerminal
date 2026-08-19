@@ -15,7 +15,7 @@ Kerminal은 Flutter 단일 코드베이스로 6개 타깃(Windows/macOS/Linux/iO
 소스는 공개하지 않지만, 인증 없이 접근 가능해야 하는 URL이 세 개 있습니다. 그래서
 저장소를 둘로 나눠 운영합니다.
 
-| | `knoxxr/kerminal-app` | `knoxxr/kerminal` |
+| | `MinaryHub/kerminal-app` | `MinaryHub/kerminal` |
 |---|---|---|
 | 공개 여부 | **비공개** | 공개 |
 | 내용 | 소스 전체·이력 | `README` / `LICENSE` / `PRIVACY.md` 뿐 |
@@ -24,9 +24,9 @@ Kerminal은 Flutter 단일 코드베이스로 6개 타깃(Windows/macOS/Linux/iO
 살려야 하는 URL:
 
 ```
-knoxxr/kerminal/releases/latest/download/latest.json   인앱 업데이트 확인
-knoxxr/kerminal/blob/main/PRIVACY.md                   MS Store 정책 10.5.1
-knoxxr/kerminal/issues                                 앱 내 "Report an issue"
+MinaryHub/kerminal/releases/latest/download/latest.json   인앱 업데이트 확인
+MinaryHub/kerminal/blob/main/PRIVACY.md                   MS Store 정책 10.5.1
+MinaryHub/kerminal/issues                                 앱 내 "Report an issue"
 ```
 
 **공개 저장소가 원래 이름(`kerminal`)을 유지한 것이 핵심입니다.** 이미 배포된 앱과
@@ -36,12 +36,32 @@ knoxxr/kerminal/issues                                 앱 내 "Report an issue"
 GitHub은 모든 릴리스에 "Source code (zip / tar.gz)"를 강제로 붙이며 이를 끄는 설정이
 없습니다. 공개 저장소에는 문서 3개만 있으므로 그 아카이브에도 문서 3개만 담깁니다.
 
+### ⚠️ `knoxxr/kerminal` 이라는 이름의 저장소를 다시 만들지 마세요
+
+두 저장소는 원래 개인 계정(`knoxxr`) 소유였고 2026-08-19 에 `MinaryHub` 조직으로
+이전했습니다. **1.2.1 이하로 배포된 앱은 예전 주소로 업데이트를 확인합니다**:
+
+```
+github.com/knoxxr/kerminal/releases/latest/download/latest.json
+```
+
+GitHub 의 저장소 이전 리다이렉트가 이 요청을 살려주고 있습니다. 그런데 **옛 이름으로
+새 저장소를 만들면 그 리다이렉트가 즉시 끊깁니다** — 이미 배포된 앱들이 영구히
+업데이트를 못 받게 됩니다. (같은 원리를 이 프로젝트가 의도적으로 이용한 적이 있습니다:
+`kerminal` → `kerminal-app` 으로 바꾼 뒤 원래 이름으로 공개 저장소를 새로 만들어
+URL 을 이어받았습니다.)
+
 ### 릴리스가 다른 저장소로 게시되는 방식
 
 `release.yml`의 `release` 잡이 `softprops/action-gh-release`에 `repository`와
 `token`을 넘깁니다. `GITHUB_TOKEN`은 자기 저장소에만 쓸 수 있어 **PAT가 필요합니다**:
 
-- fine-grained PAT, **`knoxxr/kerminal`**(공개 저장소)만, **Contents: Read and write**
+- fine-grained PAT, **Resource owner 를 `MinaryHub` 조직으로**, 대상은
+  **`MinaryHub/kerminal`**(공개 저장소)만, **Contents: Read and write**
+  - 개인 계정 소유 PAT 는 조직 저장소에 쓸 수 없습니다. 저장소를 조직으로 옮긴
+    시점에 기존 토큰은 무효가 됩니다 — `preflight` 잡이 그것을 잡습니다.
+  - 조직 설정에서 fine-grained PAT 를 허용해야 할 수 있습니다
+    (Settings → Personal access tokens → 정책 확인)
 - 비공개 저장소 시크릿 **`RELEASE_PAT`** 로 등록
 
 `preflight` 잡이 빌드 **전에** 토큰을 검사합니다(`repos/{공개저장소}` 의

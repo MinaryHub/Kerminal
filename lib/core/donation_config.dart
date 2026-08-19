@@ -20,10 +20,18 @@ class DonationConfig {
 
   static const url = String.fromEnvironment(
     'DONATION_URL',
-    // Public information, not a secret — fine to hard-code. GitHub Sponsors was
-    // approved and the page is public, so the section is on by default. Pass an
-    // empty --dart-define=DONATION_URL= to build without it.
-    defaultValue: 'https://github.com/sponsors/knoxxr',
+    // Public information, not a secret — fine to hard-code.
+    //
+    // Empty on purpose right now. The only live sponsors page belongs to a
+    // personal account, and the project moved to the MinaryHub organization
+    // specifically so a personal handle is not published. MinaryHub cannot
+    // accept sponsorships yet (`hasSponsorsListing: false` — the org listing
+    // needs its own approval), so the section stays hidden rather than shipping
+    // a link that exposes what the move was meant to hide.
+    //
+    // One-line change once the org listing is live:
+    //   defaultValue: 'https://github.com/sponsors/MinaryHub',
+    defaultValue: '',
   );
 
   /// Whether this build has somewhere to send donors.

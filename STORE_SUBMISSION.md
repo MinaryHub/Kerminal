@@ -121,9 +121,9 @@ dart run msix:create --store --version 1.0.0.0 `
 |---|---|
 | 범주 | **개발자 도구(Developer tools)** |
 | 하위 범주 | **네트워킹(Networking)** |
-| 개인정보처리방침 URL | **필수** — `https://github.com/knoxxr/kerminal/blob/main/PRIVACY.md` (§8 참조) |
-| 웹사이트 | `https://github.com/knoxxr/kerminal` |
-| 지원 연락처 정보 | `https://github.com/knoxxr/kerminal/issues` — **개인 메일 주소는 넣지 마세요.** 이 값은 스토어 페이지에 공개됩니다 |
+| 개인정보처리방침 URL | **필수** — `https://github.com/MinaryHub/kerminal/blob/main/PRIVACY.md` (§8 참조) |
+| 웹사이트 | `https://github.com/MinaryHub/kerminal` |
+| 지원 연락처 정보 | `https://github.com/MinaryHub/kerminal/issues` — **개인 메일 주소는 넣지 마세요.** 이 값은 스토어 페이지에 공개됩니다 |
 
 ### 도네이션 (정책 10.8.x)
 
@@ -237,7 +237,7 @@ Windows 자격 증명 관리자(다른 플랫폼은 키체인/키스토어)에 �
 xterm 호환 터미널 에뮬레이션, Ctrl·Alt·방향키·Tab·Esc 특수키 툴바, 라이트/다크
 테마, 글꼴 크기 조절, 새 버전 알림.
 
-문의와 버그 제보: https://github.com/knoxxr/kerminal/issues
+문의와 버그 제보: https://github.com/MinaryHub/kerminal/issues
 ```
 
 ### 앱 기능 (최대 20개 · 각 200자)
@@ -308,7 +308,7 @@ secure shell
 
 ```
 본 소프트웨어는 Minary의 독점(proprietary) 소프트웨어입니다.
-전체 조건: https://github.com/knoxxr/kerminal/blob/main/LICENSE
+전체 조건: https://github.com/MinaryHub/kerminal/blob/main/LICENSE
 ```
 
 ### 개발자 (Developed by)
@@ -360,7 +360,7 @@ else works fully offline without an account.
 xterm-compatible terminal emulation, a special-key toolbar (Ctrl, Alt, arrows,
 Tab, Esc), light/dark themes, adjustable font size, and update notifications.
 
-Questions and bug reports: https://github.com/knoxxr/kerminal/issues
+Questions and bug reports: https://github.com/MinaryHub/kerminal/issues
 ```
 
 ### App features
@@ -447,8 +447,8 @@ server management
 
 | 방식 | URL | 비고 |
 |---|---|---|
-| GitHub 마크다운 (권장·즉시 사용) | `https://github.com/knoxxr/kerminal/blob/main/PRIVACY.md` | 추가 작업 없음. `main`에 푸시하면 바로 유효 |
-| GitHub Pages | `https://knoxxr.github.io/kerminal/privacy.html` | **현재 Pages가 활성화돼 있지 않습니다**(API 404). 쓰려면 저장소 설정에서 Pages를 켜고 페이지를 배포해야 함 |
+| GitHub 마크다운 (권장·즉시 사용) | `https://github.com/MinaryHub/kerminal/blob/main/PRIVACY.md` | 추가 작업 없음. `main`에 푸시하면 바로 유효 |
+| GitHub Pages | `https://minaryhub.github.io/kerminal/privacy.html` | **현재 Pages가 활성화돼 있지 않습니다**(API 404). 쓰려면 저장소 설정에서 Pages를 켜고 페이지를 배포해야 함 |
 
 **방침이 반드시 답해야 하는 것** (스토어 정책 10.5.1 — 아래 항목이 빠지면 반려):
 
