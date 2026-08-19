@@ -1,7 +1,9 @@
 # Kerminal 개인정보처리방침 / Privacy Policy
 
-**최종 수정일 / Last updated: 2026-08-02**
-**제공자 / Provider: Minary** · 문의 / Contact: kbkim@smic.kr
+**최종 수정일 / Last updated: 2026-08-19**
+**제공자 / Provider: Minary**
+문의 / Contact: 앱 내 **설정 → Support → Contact us** ·
+[GitHub Issues](https://github.com/knoxxr/kerminal/issues)
 
 ---
 
@@ -80,7 +82,9 @@ Minary와 인프라 제공자는 호스트 주소·사용자명·비밀번호·�
 
 - **로컬 데이터:** 앱을 제거하면 삭제됩니다(보안 저장소에 저장된 비밀 포함).
   앱 내에서 호스트를 개별 삭제할 수도 있습니다.
-- **계정 데이터:** 계정 삭제를 원하시면 kbkim@smic.kr 로 요청해 주십시오.
+- **계정 데이터:** 계정 삭제를 원하시면 앱 내 **설정 → Support → Contact us** 로
+  요청해 주십시오. 앱을 이미 삭제하셨다면
+  [GitHub Issues](https://github.com/knoxxr/kerminal/issues)에 남겨 주시면 됩니다.
   본인 확인 후 계정과 연결된 프로필·키·호스트 암호문·이력을 모두 삭제합니다.
 - 열람·정정·삭제·처리정지 요구는 같은 주소로 접수합니다.
 
@@ -96,7 +100,8 @@ Kerminal은 서버 관리자를 위한 개발자 도구로, 아동을 대상으�
 
 ### 10. 문의
 
-Minary · kbkim@smic.kr · https://github.com/knoxxr/kerminal/issues
+Minary · 앱 내 **설정 → Support → Contact us** ·
+https://github.com/knoxxr/kerminal/issues
 
 ---
 
@@ -168,7 +173,8 @@ decrypted by us.
 
 Local data is removed when you uninstall the app, including secrets in the OS
 secure storage. To delete your account and all associated cloud data (profile,
-keys, host ciphertext, history), email kbkim@smic.kr. Requests to access, correct,
+keys, host ciphertext, history), use **Settings → Support → Contact us** in the app.
+Requests to access, correct,
 or restrict processing go to the same address.
 
 ### 8. Children
@@ -183,4 +189,5 @@ release notes.
 
 ### 10. Contact
 
-Minary · kbkim@smic.kr · https://github.com/knoxxr/kerminal/issues
+Minary · 앱 내 **설정 → Support → Contact us** ·
+https://github.com/knoxxr/kerminal/issues
