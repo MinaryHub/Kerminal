@@ -123,7 +123,7 @@ dart run msix:create --store --version 1.0.0.0 `
 | 하위 범주 | **네트워킹(Networking)** |
 | 개인정보처리방침 URL | **필수** — `https://github.com/knoxxr/kerminal/blob/main/PRIVACY.md` (§8 참조) |
 | 웹사이트 | `https://github.com/knoxxr/kerminal` |
-| 지원 연락처 정보 | `https://github.com/knoxxr/kerminal/issues` (또는 `kbkim@smic.kr`) |
+| 지원 연락처 정보 | `https://github.com/knoxxr/kerminal/issues` — **개인 메일 주소는 넣지 마세요.** 이 값은 스토어 페이지에 공개됩니다 |
 
 ### 도네이션 (정책 10.8.x)
 
