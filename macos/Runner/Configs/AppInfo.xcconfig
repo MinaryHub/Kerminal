@@ -11,4 +11,4 @@ PRODUCT_NAME = kerminal
 PRODUCT_BUNDLE_IDENTIFIER = kr.minary.kerminal
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 Minary. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 MinaryHub. MIT License.
