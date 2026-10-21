@@ -21,7 +21,7 @@
 | Web | `kerminal-web.tar.gz` | UI 전용 (브라우저 제약으로 직접 SSH 불가). Pages 미배포 — 예전 `minaryhub.github.io/kerminal` 링크는 설정된 적이 없어 404였습니다 |
 
 > 릴리스 아티팩트는 `git tag vX.Y.Z` 푸시 시 [GitHub Actions](.github/workflows/release.yml)가
-> 자동으로 빌드해 **드래프트 릴리스**에 첨부합니다. 앱은 [`latest.json`](DEPLOY.md#자동-업데이트-버전-인식--다운로드-안내)
+> 자동으로 빌드해 릴리스를 **바로 공개**합니다. 앱은 [`latest.json`](DEPLOY.md#자동-업데이트-버전-인식--다운로드-안내)
 > 매니페스트로 새 버전을 감지합니다.
 
 ## 후원
