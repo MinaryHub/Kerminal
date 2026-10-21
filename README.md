@@ -6,8 +6,8 @@
 접속할 수 있습니다. 자격증명은 OS 보안 저장소에 보관하며, 계정을 쓰는 경우 서버 목록은
 **종단 간 암호화**되어 동기화됩니다.
 
-> 이 저장소는 **배포 전용**입니다. 소스 코드는 공개하지 않습니다
-> ([LICENSE](LICENSE) — 독점 소프트웨어).
+> 이 저장소는 **배포 전용**입니다. 소스 코드는 [`MinaryHub/Kerminal`](https://github.com/MinaryHub/Kerminal)에
+> MIT 라이선스로 공개돼 있습니다.
 
 ## 다운로드
 
@@ -38,4 +38,4 @@
 
 ## 라이선스
 
-독점 소프트웨어입니다. [LICENSE](LICENSE) 참조.
+MIT — [LICENSE](LICENSE) 참조. 소스는 [`MinaryHub/Kerminal`](https://github.com/MinaryHub/Kerminal).
