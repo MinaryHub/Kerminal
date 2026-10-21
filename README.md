@@ -6,8 +6,9 @@
 접속할 수 있습니다. 자격증명은 OS 보안 저장소에 보관하며, 계정을 쓰는 경우 서버 목록은
 **종단 간 암호화**되어 동기화됩니다.
 
-> 이 저장소는 **배포 전용**입니다. 소스 코드는 [`MinaryHub/Kerminal`](https://github.com/MinaryHub/Kerminal)에
-> MIT 라이선스로 공개돼 있습니다.
+> ⚠️ **이 저장소는 더 이상 사용하지 않습니다.** 소스·릴리스·문의·정책 문서는 모두
+> [`MinaryHub/Kerminal`](https://github.com/MinaryHub/Kerminal)(MIT 오픈소스)에 있습니다.
+> 새 버전은 [Releases](https://github.com/MinaryHub/Kerminal/releases)에서, 문의는 [Issues](https://github.com/MinaryHub/Kerminal/issues)에 남겨 주세요.
 
 ## 다운로드
 
