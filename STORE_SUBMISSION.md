@@ -301,13 +301,13 @@ secure shell
 ### 저작권 및 상표 정보 (최대 200자)
 
 ```
-© 2026 Minary. All rights reserved.
+© 2026 MinaryHub. Kerminal은 MIT 라이선스 오픈소스 소프트웨어입니다.
 ```
 
 ### 추가 라이선스 조건
 
 ```
-본 소프트웨어는 Minary의 독점(proprietary) 소프트웨어입니다.
+본 소프트웨어는 MIT 라이선스로 배포되는 오픈소스 소프트웨어입니다.
 전체 조건: https://github.com/MinaryHub/kerminal/blob/main/LICENSE
 ```
 
