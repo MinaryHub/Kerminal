@@ -4,7 +4,7 @@ Kerminal은 Flutter 단일 코드베이스로 6개 타깃(Windows/macOS/Linux/iO
 배포합니다. 이 문서는 릴리스 아티팩트 빌드와 서명/스토어 제출 절차를 정리합니다.
 
 > **자동화:** 태그를 밀면 GitHub Actions([release.yml](.github/workflows/release.yml))가
-> 전 플랫폼 아티팩트를 빌드해 **드래프트 릴리스**에 첨부합니다.
+> 전 플랫폼 아티팩트를 빌드해 릴리스를 **바로 공개**합니다.
 > ```bash
 > git tag v0.1.0 && git push origin v0.1.0
 > ```
@@ -40,8 +40,8 @@ GitHub 의 저장소 이전 리다이렉트가 이 요청을 살려주고 있습
 
 ### 릴리스 게시
 
-`release.yml`의 `release` 잡이 기본 `GITHUB_TOKEN`으로 이 저장소에 **드래프트 릴리스**를
-만들고 아티팩트와 `latest.json`을 첨부합니다. 별도 PAT는 필요 없습니다 — 예전에 쓰던
+`release.yml`의 `release` 잡이 기본 `GITHUB_TOKEN`으로 이 저장소에 릴리스를
+만들고 아티팩트와 `latest.json`을 첨부해 **바로 공개**합니다. 공개 즉시 앱이 새 버전을 감지합니다. 별도 PAT는 필요 없습니다 — 예전에 쓰던
 `RELEASE_PAT` 시크릿은 삭제해도 됩니다.
 
 빌드는 성공했고 게시만 실패했다면 아티팩트가 남아 있으므로 재빌드가 필요 없습니다:
