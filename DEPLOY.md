@@ -10,31 +10,20 @@ Kerminal은 Flutter 단일 코드베이스로 6개 타깃(Windows/macOS/Linux/iO
 > ```
 > 서명/스토어 제출은 아래 플랫폼별 절차에 따라 인증서·계정이 필요합니다.
 
-## 저장소 두 개 구조
+## 저장소와 공개 URL
 
-소스는 공개하지 않지만, 인증 없이 접근 가능해야 하는 URL이 세 개 있습니다. 그래서
-저장소를 둘로 나눠 운영합니다.
+소스·이력·릴리스·문의·정책 문서가 모두 이 저장소(`MinaryHub/Kerminal`, MIT 라이선스)
+하나에 있습니다. 예전의 배포 전용 저장소 `MinaryHub/Kerminal.Release` 는 더 이상
+쓰지 않습니다.
 
-| | `MinaryHub/kerminal-app` | `MinaryHub/kerminal` |
-|---|---|---|
-| 공개 여부 | **비공개** | 공개 |
-| 내용 | 소스 전체·이력 | `README` / `LICENSE` / `PRIVACY.md` 뿐 |
-| 역할 | 개발·CI·릴리스 빌드 | **릴리스 게시**·문의(Issues)·정책 문서 |
-
-살려야 하는 URL:
+앱과 스토어 리스팅이 쓰는 URL — 저장소 이름은 대소문자를 구분하지 않으므로
+`kerminal` 은 이 저장소입니다:
 
 ```
 MinaryHub/kerminal/releases/latest/download/latest.json   인앱 업데이트 확인
 MinaryHub/kerminal/blob/main/PRIVACY.md                   MS Store 정책 10.5.1
 MinaryHub/kerminal/issues                                 앱 내 "Report an issue"
 ```
-
-**공개 저장소가 원래 이름(`kerminal`)을 유지한 것이 핵심입니다.** 이미 배포된 앱과
-스토어 리스팅이 그 URL을 그대로 쓰기 때문에, 비공개 전환을 위해 앱 코드나 스토어
-리스팅을 고칠 필요가 없었습니다.
-
-GitHub은 모든 릴리스에 "Source code (zip / tar.gz)"를 강제로 붙이며 이를 끄는 설정이
-없습니다. 공개 저장소에는 문서 3개만 있으므로 그 아카이브에도 문서 3개만 담깁니다.
 
 ### ⚠️ `knoxxr/kerminal` 이라는 이름의 저장소를 다시 만들지 마세요
 
@@ -47,33 +36,13 @@ github.com/knoxxr/kerminal/releases/latest/download/latest.json
 
 GitHub 의 저장소 이전 리다이렉트가 이 요청을 살려주고 있습니다. 그런데 **옛 이름으로
 새 저장소를 만들면 그 리다이렉트가 즉시 끊깁니다** — 이미 배포된 앱들이 영구히
-업데이트를 못 받게 됩니다. (같은 원리를 이 프로젝트가 의도적으로 이용한 적이 있습니다:
-`kerminal` → `kerminal-app` 으로 바꾼 뒤 원래 이름으로 공개 저장소를 새로 만들어
-URL 을 이어받았습니다.)
+업데이트를 못 받게 됩니다.
 
-### 릴리스가 다른 저장소로 게시되는 방식
+### 릴리스 게시
 
-`release.yml`의 `release` 잡이 `softprops/action-gh-release`에 `repository`와
-`token`을 넘깁니다. `GITHUB_TOKEN`은 자기 저장소에만 쓸 수 있어 **PAT가 필요합니다**:
-
-- fine-grained PAT, **Resource owner 를 `MinaryHub` 조직으로**, 대상은
-  **`MinaryHub/kerminal`**(공개 저장소)만, **Contents: Read and write**
-  - 개인 계정 소유 PAT 는 조직 저장소에 쓸 수 없습니다. 저장소를 조직으로 옮긴
-    시점에 기존 토큰은 무효가 됩니다 — `preflight` 잡이 그것을 잡습니다.
-  - 조직 설정에서 fine-grained PAT 를 허용해야 할 수 있습니다
-    (Settings → Personal access tokens → 정책 확인)
-- 비공개 저장소 시크릿 **`RELEASE_PAT`** 로 등록
-
-`preflight` 잡이 빌드 **전에** 토큰을 검사합니다(`repos/{공개저장소}` 의
-`permissions.push`). 처음 구성할 때 이 검사가 없어 5개 플랫폼을 다 빌드한 뒤
-게시 단계에서 403이 났고, 비공개 저장소라 그 시간이 그대로 청구됐습니다.
-
-토큰 오류 두 가지가 흔합니다:
-
-| 증상 | 원인 |
-|---|---|
-| `cannot read` (404) | 토큰 범위를 **비공개 저장소**로 잡았다 — 공개 저장소여야 합니다 |
-| `permissions.push=false` | Contents 가 Read-only |
+`release.yml`의 `release` 잡이 기본 `GITHUB_TOKEN`으로 이 저장소에 **드래프트 릴리스**를
+만들고 아티팩트와 `latest.json`을 첨부합니다. 별도 PAT는 필요 없습니다 — 예전에 쓰던
+`RELEASE_PAT` 시크릿은 삭제해도 됩니다.
 
 빌드는 성공했고 게시만 실패했다면 아티팩트가 남아 있으므로 재빌드가 필요 없습니다:
 
@@ -81,22 +50,14 @@ URL 을 이어받았습니다.)
 gh run rerun <run-id> --failed
 ```
 
-릴리스 노트는 이 저장소의 `CHANGELOG.md`에서 해당 버전 절을 잘라 씁니다.
-`generate_release_notes`는 껐습니다 — 공개 저장소의 커밋(문서 3개)을 요약할 뿐입니다.
-
-`PRIVACY.md`는 릴리스마다 공개 저장소로 동기화됩니다. 정책 문서가 갈라지면 스토어에
-제출한 URL이 낡은 내용을 보여주게 되므로 자동화했습니다.
+릴리스 노트는 `CHANGELOG.md`에서 해당 버전 절을 잘라 씁니다.
 
 ### CI 비용
 
-비공개 저장소는 Actions 사용량이 과금되고 러너 OS별 배수가 붙습니다 — **Windows ×2,
-macOS ×10**. 12분짜리 macOS 빌드가 120분으로 계산되어, 매 PR마다 데스크톱 빌드를
-돌리면 무료 2,000분이 열두 번쯤에 소진됩니다.
-
-그래서 PR·푸시 CI는 **Linux(web·apk)까지만** 돌리고, Windows·macOS 빌드는
-`build-desktop` 잡으로 분리해 **수동 실행**으로 뒀습니다. 데스크톱 컴파일은 태그
-릴리스에서 실제로 검증되며, 플랫폼 채널·창 설정·파일 선택기·경로 처리를 건드렸다면
-태그 전에 한 번 돌려보세요:
+공개 저장소라 GitHub 호스팅 러너는 무료입니다. 그래도 빌드 시간을 줄이려고 PR·푸시
+CI는 **Linux(web·apk)까지만** 돌리고, Windows·macOS 빌드는 `build-desktop` 잡으로
+분리해 **수동 실행**으로 뒀습니다. 데스크톱 컴파일은 태그 릴리스에서 실제로 검증되며,
+플랫폼 채널·창 설정·파일 선택기·경로 처리를 건드렸다면 태그 전에 한 번 돌려보세요:
 
 ```bash
 gh workflow run ci.yml --ref <브랜치>
