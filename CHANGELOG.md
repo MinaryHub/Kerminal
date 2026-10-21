@@ -3,6 +3,13 @@
 All notable changes to Kerminal are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow semver.
 
+## [Unreleased]
+
+### Changed
+- **소스를 MIT 라이선스 오픈소스로 공개했습니다.** 소스·릴리스·문의·정책 문서가 모두
+  `github.com/MinaryHub/Kerminal` 한 곳에 있습니다. 다운로드·업데이트·문의 주소는
+  그대로입니다.
+
 ## [1.2.2]
 
 ### Changed
