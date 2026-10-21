@@ -81,7 +81,7 @@ Termius와 유사한 크로스플랫폼 SSH 클라이언트를 개발한다.
 - [x] 전 플랫폼 앱 아이콘 (flutter_launcher_icons, 소스 assets/icon/app_icon.png)
 - [x] 데스크톱 패키징 구성: Windows MSIX(msix), Linux deb/AppImage·macOS DMG(flutter_distributor)
 - [x] Android 릴리스 서명 구성 (key.properties, build.gradle.kts) + APK/AAB
-- [x] 태그 기반 GitHub Actions 릴리스 워크플로 (전 플랫폼 아티팩트 → 드래프트 릴리스)
+- [x] 태그 기반 GitHub Actions 릴리스 워크플로 (전 플랫폼 아티팩트 → 릴리스 바로 공개)
 - [x] 버전 체계, LICENSE, CHANGELOG, DEPLOY.md
 - [ ] 실제 코드사이닝/스토어 제출 — **사용자 인증서·계정 필요** (DEPLOY.md 참고)
 - [ ] 자동 업데이트(데스크톱) 채널 — 후속 (DEPLOY.md에 방안 기술)
