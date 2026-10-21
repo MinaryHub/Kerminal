@@ -11,46 +11,8 @@ permissions:
   contents: write
 
 jobs:
-  # Fails in seconds instead of after ~20 minutes of builds. Releases go to a
-  # different (public) repo via RELEASE_PAT, and a misconfigured PAT is only
-  # discovered when the release is created — after every platform has built.
-  # That happened once: five successful builds, then
-  #   403 {"message":"Resource not accessible by personal access token"}
-  # In a private repo those wasted minutes are billed (macOS 10x, Windows 2x).
-  preflight:
-    name: Check release token
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    env:
-      PUBLIC_REPO: MinaryHub/kerminal
-    steps:
-      - name: RELEASE_PAT can write to the public repo
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
-        run: |
-          if [ -z "$GH_TOKEN" ]; then
-            echo "::error::RELEASE_PAT is not set. Create a fine-grained PAT for ${PUBLIC_REPO} (Contents: read and write) and store it as RELEASE_PAT."
-            exit 1
-          fi
-          # `permissions.push` is what the releases API checks. A token scoped to
-          # the wrong repository 404s here; one with Contents:read reports false.
-          if ! perms=$(gh api "repos/${PUBLIC_REPO}" --jq '.permissions.push' 2>&1); then
-            echo "::error::RELEASE_PAT cannot read ${PUBLIC_REPO}. The token's Resource owner must be the MinaryHub organization (a personal-account PAT cannot reach org repos), and its repository access must include ${PUBLIC_REPO} — not the private source repo. API said: ${perms}"
-            exit 1
-          fi
-          if [ "$perms" != "true" ]; then
-            echo "::error::RELEASE_PAT lacks write access to ${PUBLIC_REPO} (permissions.push=${perms}). Set Permissions -> Repository -> Contents to 'Read and write'."
-            exit 1
-          fi
-          echo "RELEASE_PAT can write to ${PUBLIC_REPO}."
-
   build:
     name: Build ${{ matrix.target }}
-    # preflight only runs for tags. A skipped dependency would otherwise skip
-    # this job too, breaking manual (workflow_dispatch) builds — so gate on the
-    # result being anything other than an outright failure.
-    needs: preflight
-    if: ${{ !cancelled() && needs.preflight.result != 'failure' }}
     strategy:
       fail-fast: false
       matrix:
@@ -225,19 +187,17 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
-    # Releases are published to the PUBLIC repo, not this one. This repo is
-    # private (the source is not published), but three URLs must stay reachable
-    # without authentication:
+    # Releases are published to this repository, where the source lives too
+    # (MIT). These URLs must stay reachable without authentication:
     #
-    #   PUBLIC_REPO/releases/latest/download/latest.json   in-app update check
-    #   PUBLIC_REPO/blob/main/PRIVACY.md                   MS Store policy 10.5.1
-    #   PUBLIC_REPO/issues                                 in-app "Report an issue"
+    #   MinaryHub/kerminal/releases/latest/download/latest.json   in-app update check
+    #   MinaryHub/kerminal/blob/main/PRIVACY.md                   MS Store policy 10.5.1
+    #   MinaryHub/kerminal/issues                                 in-app "Report an issue"
     #
-    # The public repo kept the original name, so already-installed apps and the
-    # Store listing need no change. Cross-repo publishing needs a PAT —
-    # GITHUB_TOKEN is scoped to this repo only.
+    # Repository names are case-insensitive, so `kerminal` is this repo.
+    # GITHUB_TOKEN is enough: no PAT is needed to publish to the same repo.
     env:
-      PUBLIC_REPO: MinaryHub/kerminal
+      PUBLIC_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -249,7 +209,6 @@ jobs:
 
       # Generate the update manifest describing THIS release. The app polls
       # releases/latest/download/latest.json, so older versions detect it.
-      # BASE points at the PUBLIC repo — github.repository is the private one.
       - name: Generate latest.json
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -268,9 +227,8 @@ jobs:
           EOF
           cat latest.json
 
-      # Release notes come from CHANGELOG.md in THIS repo. `generate_release_notes`
-      # is off on purpose: it would summarise the *public* repo's commits, which
-      # only ever contains three documents.
+      # Release notes come from CHANGELOG.md. `generate_release_notes` is off on
+      # purpose: the notes are written for users, not a list of commits.
       - name: Extract this version's CHANGELOG section
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -288,29 +246,9 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
-          repository: ${{ env.PUBLIC_REPO }}
-          token: ${{ secrets.RELEASE_PAT }}
           tag_name: ${{ github.ref_name }}
           name: Kerminal ${{ github.ref_name }}
           body_path: notes.md
           files: |
             artifacts/**/*
             latest.json
-
-      # The privacy policy is a Store compliance document served from the public
-      # repo. If it changes here, the public copy must follow or the submitted
-      # URL shows a stale policy.
-      - name: Sync PRIVACY.md to the public repo
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
-        run: |
-          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${PUBLIC_REPO}.git" public
-          cp PRIVACY.md public/PRIVACY.md
-          cd public
-          if git diff --quiet; then
-            echo "PRIVACY.md already up to date."
-            exit 0
-          fi
-          git -c user.name=github-actions -c user.email=github-actions@github.com \
-            commit -qam "docs: PRIVACY.md 동기화 (${GITHUB_REF_NAME})"
-          git push -q
