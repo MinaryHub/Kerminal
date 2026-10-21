@@ -2,9 +2,8 @@
 
 크로스플랫폼 SSH/터미널 클라이언트. Flutter 단일 코드베이스로 Windows / macOS / Linux / iOS / Android / Web을 지원합니다.
 
-> 소스 코드는 [MIT 라이선스](LICENSE)로 공개합니다. 설치 파일·문의·정책 문서는 배포 저장소
-> [`MinaryHub/Kerminal.Release`](https://github.com/MinaryHub/Kerminal.Release)에서 제공합니다.
-> 저장소 구조는 [DEPLOY.md](DEPLOY.md#저장소-두-개-구조)를 보세요.
+> 오픈소스([MIT 라이선스](LICENSE))입니다. 소스·릴리스·문의([Issues](https://github.com/MinaryHub/Kerminal/issues))·
+> 정책 문서([PRIVACY.md](PRIVACY.md))가 모두 이 저장소에 있습니다. 배포 절차는 [DEPLOY.md](DEPLOY.md)를 보세요.
 
 개발 계획은 [PLAN.md](PLAN.md), 배포 절차는 [DEPLOY.md](DEPLOY.md),
 릴리스 전 손으로 확인할 항목은 [docs/MANUAL_TESTS.md](docs/MANUAL_TESTS.md)를 참고하세요.
