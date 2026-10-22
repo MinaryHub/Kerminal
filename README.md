@@ -1,25 +1,38 @@
 # Kerminal
 
-Termius 유사 크로스플랫폼 SSH/터미널 클라이언트. Flutter 단일 코드베이스로 Windows / macOS / Linux / iOS / Android / Web을 지원합니다.
+크로스플랫폼 SSH/터미널 클라이언트. Flutter 단일 코드베이스로 Windows / macOS / Linux / iOS / Android / Web을 지원합니다.
+
+> 오픈소스([MIT 라이선스](LICENSE))입니다. 소스·릴리스·문의([Issues](https://github.com/MinaryHub/Kerminal/issues))·
+> 정책 문서([PRIVACY.md](PRIVACY.md))가 모두 이 저장소에 있습니다. 배포 절차는 [DEPLOY.md](DEPLOY.md)를 보세요.
 
 개발 계획은 [PLAN.md](PLAN.md), 배포 절차는 [DEPLOY.md](DEPLOY.md),
 릴리스 전 손으로 확인할 항목은 [docs/MANUAL_TESTS.md](docs/MANUAL_TESTS.md)를 참고하세요.
 
 ## 다운로드 / 배포
 
-최신 릴리스: **[Releases 페이지](https://github.com/knoxxr/kerminal/releases/latest)** · [전체 릴리스](https://github.com/knoxxr/kerminal/releases)
+최신 릴리스: **[Releases 페이지](https://github.com/MinaryHub/kerminal/releases/latest)** · [전체 릴리스](https://github.com/MinaryHub/kerminal/releases)
 
 | 플랫폼 | 아티팩트 | 비고 |
 |--------|----------|------|
-| Windows | [Microsoft Store](https://apps.microsoft.com/detail/9P23N0L20CTR) · [`.msix`](https://github.com/knoxxr/kerminal/releases/latest) | 스토어는 자동 업데이트·서명 완료. `.msix` 직접 설치 시 최초 1회 `kerminal-codesign.cer`를 **"신뢰할 수 있는 루트 인증 기관"**에 설치 ([DEPLOY.md](DEPLOY.md#windows-msix)) |
-| macOS | [`.dmg`](https://github.com/knoxxr/kerminal/releases/latest) | 열어서 Kerminal을 `Applications`로 드래그. 첫 실행은 **우클릭 → 열기**(Apple 서명·공증 전이라 Gatekeeper 경고) |
-| Linux | [`.AppImage` / `.deb`](https://github.com/knoxxr/kerminal/releases/latest) | |
-| Android | [`.apk` / `.aab`](https://github.com/knoxxr/kerminal/releases/latest) | Play Store: `.aab` |
-| Web | [웹 데모](https://knoxxr.github.io/kerminal/) | UI 전용 (브라우저 제약으로 직접 SSH 불가) |
+| Windows | [Microsoft Store](https://apps.microsoft.com/detail/9P23N0L20CTR) · [`.msix`](https://github.com/MinaryHub/kerminal/releases/latest) | 스토어는 자동 업데이트·서명 완료. `.msix` 직접 설치 시 최초 1회 `kerminal-codesign.cer`를 **"신뢰할 수 있는 루트 인증 기관"**에 설치 ([DEPLOY.md](DEPLOY.md#windows-msix)) |
+| macOS | [`.dmg`](https://github.com/MinaryHub/kerminal/releases/latest) | 열어서 Kerminal을 `Applications`로 드래그. 첫 실행은 **우클릭 → 열기**(Apple 서명·공증 전이라 Gatekeeper 경고) |
+| Linux | [`.AppImage` / `.deb`](https://github.com/MinaryHub/kerminal/releases/latest) | |
+| Android | [`.apk` / `.aab`](https://github.com/MinaryHub/kerminal/releases/latest) | Play Store: `.aab` |
+| Web | `kerminal-web.tar.gz` | UI 전용 (브라우저 제약으로 직접 SSH 불가). Pages 미배포 — 예전 `minaryhub.github.io/kerminal` 링크는 설정된 적이 없어 404였습니다 |
 
 > 릴리스 아티팩트는 `git tag vX.Y.Z` 푸시 시 [GitHub Actions](.github/workflows/release.yml)가
-> 자동으로 빌드해 **드래프트 릴리스**에 첨부합니다. 앱은 [`latest.json`](DEPLOY.md#자동-업데이트-버전-인식--다운로드-안내)
+> 자동으로 빌드해 릴리스를 **바로 공개**합니다. 앱은 [`latest.json`](DEPLOY.md#자동-업데이트-버전-인식--다운로드-안내)
 > 매니페스트로 새 버전을 감지합니다.
+
+## 후원
+
+**현재 앱에서 숨겨져 있습니다.** MinaryHub 조직은 아직 후원을 받을 수 없고
+(`hasSponsorsListing: false` — 조직 Sponsors 심사가 별도로 필요합니다), 개인 계정
+페이지를 쓰면 조직으로 옮긴 이유가 무너지기 때문입니다.
+
+조직 리스팅이 승인되면 [`lib/core/donation_config.dart`](lib/core/donation_config.dart)
+의 `defaultValue` 를 `https://github.com/sponsors/MinaryHub` 로 바꾸면 됩니다.
+대가는 붙이지 않습니다(정책 10.8.x: 혜택을 주면 Store IAP 의무).
 
 ## 기술 스택
 
@@ -70,4 +83,4 @@ flutter test
 
 ## 라이선스
 
-MIT — [LICENSE](LICENSE) 참조.
+MIT — [LICENSE](LICENSE)

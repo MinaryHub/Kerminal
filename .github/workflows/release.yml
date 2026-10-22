@@ -1,7 +1,7 @@
 name: Release
 
 # Tag a commit to build release artifacts for every platform and attach them
-# to a draft GitHub Release, e.g.:  git tag v0.1.0 && git push origin v0.1.0
+# to a GitHub Release, published once every build has passed, e.g.:  git tag v0.1.0 && git push origin v0.1.0
 on:
   push:
     tags: ['v*']
@@ -106,15 +106,20 @@ jobs:
           $build = if ($parts.Count -gt 1) { $parts[1] } else { '0' }
           $msixVer = "$($parts[0]).$build"
           Write-Host "MSIX version: $msixVer (from pubspec '$raw')"
+          # Named `kerminal-sideload.msix`, not `kerminal.msix`: this package is
+          # for direct install only. It carries a revision number (X.Y.Z.B) and a
+          # self-signed publisher, both of which Partner Center rejects. It has
+          # been uploaded to the Store by mistake three times; the file name now
+          # says which one it is. The Store package is `kerminal-store.msix`.
           # Inject cloud credentials into the underlying `flutter build windows`.
           $defs = "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL) --dart-define=SUPABASE_ANON_KEY=$($env:SUPABASE_ANON_KEY)"
           if ($env:WINDOWS_CERT_BASE64) {
             $pfx = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
             [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERT_BASE64))
-            dart run msix:create --version $msixVer --windows-build-args "$defs" --certificate-path $pfx --certificate-password $env:WINDOWS_CERT_PASSWORD
+            dart run msix:create --version $msixVer --output-name kerminal-sideload --windows-build-args "$defs" --certificate-path $pfx --certificate-password $env:WINDOWS_CERT_PASSWORD
           } else {
             Write-Host 'No signing secret; building with msix test certificate.'
-            dart run msix:create --version $msixVer --windows-build-args "$defs"
+            dart run msix:create --version $msixVer --output-name kerminal-sideload --windows-build-args "$defs"
           }
       - if: matrix.target == 'windows'
         shell: pwsh
@@ -178,11 +183,26 @@ jobs:
           path: dist/*
 
   release:
-    name: Draft GitHub Release
+    name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    # Releases are published to this repository, where the source lives too
+    # (MIT). These URLs must stay reachable without authentication:
+    #
+    #   MinaryHub/kerminal/releases/latest/download/latest.json   in-app update check
+    #   MinaryHub/kerminal/blob/main/PRIVACY.md                   MS Store policy 10.5.1
+    #   MinaryHub/kerminal/issues                                 in-app "Report an issue"
+    #
+    # Repository names are case-insensitive, so `kerminal` is this repo.
+    # GITHUB_TOKEN is enough: no PAT is needed to publish to the same repo.
+    env:
+      PUBLIC_REPO: ${{ github.repository }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -192,13 +212,13 @@ jobs:
       - name: Generate latest.json
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          BASE="${{ github.server_url }}/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
+          BASE="${{ github.server_url }}/${PUBLIC_REPO}/releases/download/${GITHUB_REF_NAME}"
           cat > latest.json <<EOF
           {
             "version": "${VERSION}",
             "notes": "Kerminal ${VERSION}. See the release page for details.",
             "downloads": {
-              "windows": "${BASE}/kerminal.msix",
+              "windows": "${BASE}/kerminal-sideload.msix",
               "macos": "${BASE}/kerminal-macos.dmg",
               "linux": "${BASE}/kerminal-linux-x64.tar.gz",
               "android": "${BASE}/kerminal.apk"
@@ -207,10 +227,27 @@ jobs:
           EOF
           cat latest.json
 
+      # Release notes come from CHANGELOG.md. `generate_release_notes` is off on
+      # purpose: the notes are written for users, not a list of commits.
+      - name: Extract this version's CHANGELOG section
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { inside = 1; next }
+            inside && /^## \[/ { exit }
+            inside { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "No CHANGELOG section for ${VERSION}; falling back to a generic note." >&2
+            printf 'Kerminal %s.\n' "$VERSION" > notes.md
+          fi
+          cat notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
-          draft: true
-          generate_release_notes: true
+          tag_name: ${{ github.ref_name }}
+          name: Kerminal ${{ github.ref_name }}
+          body_path: notes.md
           files: |
             artifacts/**/*
             latest.json

@@ -11,7 +11,7 @@ import 'update_service.dart';
 const kUpdateManifestUrl = String.fromEnvironment(
   'UPDATE_MANIFEST_URL',
   defaultValue:
-      'https://github.com/knoxxr/kerminal/releases/latest/download/latest.json',
+      'https://github.com/MinaryHub/kerminal/releases/latest/download/latest.json',
 );
 
 /// The manifest URL as a provider so it can be overridden in tests.

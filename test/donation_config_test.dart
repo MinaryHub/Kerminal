@@ -2,16 +2,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kerminal/core/donation_config.dart';
 
 void main() {
-  test('an unconfigured build reports no donation page', () {
-    // Tests run without --dart-define, so this is the default build. The
-    // settings section keys off this: no URL, no section, no dead link.
+  test('the default build ships no donation link yet', () {
+    // The project moved to the MinaryHub organization so that no personal
+    // handle is published; the org cannot accept sponsorships yet, so the
+    // section is deliberately hidden. Flipping `defaultValue` back on is a
+    // one-line change — this test is what makes that flip deliberate.
     expect(DonationConfig.url, isEmpty);
     expect(DonationConfig.isConfigured, isFalse);
   });
 
+  test('whatever gets configured must survive the usability check', () {
+    // Guards the eventual org URL, and any --dart-define, against a mailto: or
+    // scheme-less value that would render a button opening nothing.
+    expect(
+      DonationConfig.hasUsableUrl('https://github.com/sponsors/MinaryHub'),
+      isTrue,
+    );
+  });
+
   group('hasUsableUrl', () {
     test('accepts a real donation page', () {
-      expect(DonationConfig.hasUsableUrl('https://github.com/sponsors/knoxxr'),
+      expect(DonationConfig.hasUsableUrl('https://github.com/sponsors/MinaryHub'),
           isTrue);
       expect(DonationConfig.hasUsableUrl('http://example.com/tip'), isTrue);
       expect(DonationConfig.hasUsableUrl('  https://ko-fi.com/x  '), isTrue);

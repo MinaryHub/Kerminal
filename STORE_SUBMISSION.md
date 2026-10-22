@@ -47,6 +47,19 @@ Kerminal의 Microsoft Store(파트너 센터) 제출 화면에 그대로 붙여�
 
 ### (2-1) 스토어용 패키지 만드는 법
 
+> ⚠️ **릴리스 페이지에서 받은 파일을 올리면 반려됩니다.** 그것은 사이드로딩용이라
+> 버전이 `X.Y.Z.빌드번호`(예: `1.1.0.48`)이고 identity·게시자도 다릅니다. 실제로 이
+> 실수로 **세 번** 반려됐습니다.
+>
+> | | 스토어용 | 사이드로딩용 |
+> |---|---|---|
+> | 파일명 | `kerminal-store.msix` | `kerminal-sideload.msix` |
+> | 버전 끝자리 | `0` | 빌드 번호 |
+> | 출처 | Actions → Store package 워크플로 | 릴리스 페이지 |
+>
+> 파일명이 `kerminal (1).msix` 처럼 `(숫자)`가 붙어 있으면 브라우저로 내려받은
+> 것이므로 릴리스 자산일 가능성이 높습니다 — 다시 확인하세요.
+
 MSIX는 **Windows에서만** 빌드됩니다. 맥/리눅스만 쓴다면 GitHub Actions의
 **Store package (MSIX)** 워크플로를 Actions 탭에서 `Run workflow`로 실행하세요
 (`.github/workflows/store-package.yml`). 위 표의 세 값 + 버전을 입력받아 서명 없는
@@ -108,9 +121,9 @@ dart run msix:create --store --version 1.0.0.0 `
 |---|---|
 | 범주 | **개발자 도구(Developer tools)** |
 | 하위 범주 | **네트워킹(Networking)** |
-| 개인정보처리방침 URL | **필수** — `https://github.com/knoxxr/kerminal/blob/main/PRIVACY.md` (§8 참조) |
-| 웹사이트 | `https://github.com/knoxxr/kerminal` |
-| 지원 연락처 정보 | `https://github.com/knoxxr/kerminal/issues` (또는 `kbkim@smic.kr`) |
+| 개인정보처리방침 URL | **필수** — `https://github.com/MinaryHub/kerminal/blob/main/PRIVACY.md` (§8 참조) |
+| 웹사이트 | `https://github.com/MinaryHub/kerminal` |
+| 지원 연락처 정보 | `https://github.com/MinaryHub/kerminal/issues` — **개인 메일 주소는 넣지 마세요.** 이 값은 스토어 페이지에 공개됩니다 |
 
 ### 도네이션 (정책 10.8.x)
 
@@ -224,7 +237,7 @@ Windows 자격 증명 관리자(다른 플랫폼은 키체인/키스토어)에 �
 xterm 호환 터미널 에뮬레이션, Ctrl·Alt·방향키·Tab·Esc 특수키 툴바, 라이트/다크
 테마, 글꼴 크기 조절, 새 버전 알림.
 
-문의와 버그 제보: https://github.com/knoxxr/kerminal/issues
+문의와 버그 제보: https://github.com/MinaryHub/kerminal/issues
 ```
 
 ### 앱 기능 (최대 20개 · 각 200자)
@@ -265,29 +278,37 @@ Windows · macOS · Linux · Android · iOS 동일 사용 경험
 - 동기화·저장된 자격증명 관련 안정성 수정
 ```
 
-### 검색어 (최대 7개 · 각 30자, 비공개)
+### 검색어 (최대 7개 · 비공개)
+
+> ⚠️ **다른 제품의 이름을 넣으면 반려됩니다** (정책 10.1.3). 실제로
+> `putty alternative` 때문에 반려된 적이 있습니다 — "Problematic Keyword(s): Putty".
+> 경쟁 제품명(PuTTY, Termius, MobaXterm …)은 **비교 목적이라도** 쓸 수 없습니다.
+> 자기가 게시한 제품의 이름만 허용됩니다.
+>
+> 정책 요건: **고유 용어 7개 이하**, **제품과 실제로 관련**, 타 제품명 금지.
+> 파트너 센터 UI가 더 관대해 보여도 정책이 우선합니다.
 
 ```
 ssh
 ssh 클라이언트
+sftp
 터미널
-remote shell
+secure shell
 서버 관리
-ssh client
-terminal emulator
+원격 접속
 ```
 
 ### 저작권 및 상표 정보 (최대 200자)
 
 ```
-© 2026 Minary. All rights reserved.
+© 2026 MinaryHub. Kerminal은 MIT 라이선스 오픈소스 소프트웨어입니다.
 ```
 
 ### 추가 라이선스 조건
 
 ```
-본 소프트웨어는 Minary의 독점(proprietary) 소프트웨어입니다.
-전체 조건: https://github.com/knoxxr/kerminal/blob/main/LICENSE
+본 소프트웨어는 MIT 라이선스로 배포되는 오픈소스 소프트웨어입니다.
+전체 조건: https://github.com/MinaryHub/kerminal/blob/main/LICENSE
 ```
 
 ### 개발자 (Developed by)
@@ -339,7 +360,7 @@ else works fully offline without an account.
 xterm-compatible terminal emulation, a special-key toolbar (Ctrl, Alt, arrows,
 Tab, Esc), light/dark themes, adjustable font size, and update notifications.
 
-Questions and bug reports: https://github.com/knoxxr/kerminal/issues
+Questions and bug reports: https://github.com/MinaryHub/kerminal/issues
 ```
 
 ### App features
@@ -382,14 +403,17 @@ encrypted backups and optional end-to-end encrypted sync.
 
 ### Search terms
 
+Same rule as above — no other product's name, seven unique terms at most, all
+actually relevant to Kerminal.
+
 ```
 ssh
 ssh client
-terminal
-remote shell
-server admin
-putty alternative
+sftp
 terminal emulator
+secure shell
+remote server
+server management
 ```
 
 ---
@@ -423,8 +447,8 @@ terminal emulator
 
 | 방식 | URL | 비고 |
 |---|---|---|
-| GitHub 마크다운 (권장·즉시 사용) | `https://github.com/knoxxr/kerminal/blob/main/PRIVACY.md` | 추가 작업 없음. `main`에 푸시하면 바로 유효 |
-| GitHub Pages | `https://knoxxr.github.io/kerminal/privacy.html` | **현재 Pages가 활성화돼 있지 않습니다**(API 404). 쓰려면 저장소 설정에서 Pages를 켜고 페이지를 배포해야 함 |
+| GitHub 마크다운 (권장·즉시 사용) | `https://github.com/MinaryHub/kerminal/blob/main/PRIVACY.md` | 추가 작업 없음. `main`에 푸시하면 바로 유효 |
+| GitHub Pages | `https://minaryhub.github.io/kerminal/privacy.html` | **현재 Pages가 활성화돼 있지 않습니다**(API 404). 쓰려면 저장소 설정에서 Pages를 켜고 페이지를 배포해야 함 |
 
 **방침이 반드시 답해야 하는 것** (스토어 정책 10.5.1 — 아래 항목이 빠지면 반려):
 
@@ -523,5 +547,6 @@ the user initiates plus the two HTTPS endpoints above.
 - [ ] `dart run msix:create --store --version 1.0.0.0 ...` 로 패키지 생성 (§0-2)
 - [ ] 가격/시장/속성/연령 등급 입력 (§2~4)
 - [ ] 등록 정보 ko-KR + en-US 입력 (§5, §6)
+- [ ] **검색어에 타 제품명이 없는지 확인** — 정책 10.1.3, 실제 반려 사유였음
 - [ ] 인증 메모 붙여넣기 (§9)
 - [ ] 제출

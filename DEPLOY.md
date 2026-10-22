@@ -4,11 +4,64 @@ Kerminal은 Flutter 단일 코드베이스로 6개 타깃(Windows/macOS/Linux/iO
 배포합니다. 이 문서는 릴리스 아티팩트 빌드와 서명/스토어 제출 절차를 정리합니다.
 
 > **자동화:** 태그를 밀면 GitHub Actions([release.yml](.github/workflows/release.yml))가
-> 전 플랫폼 아티팩트를 빌드해 **드래프트 릴리스**에 첨부합니다.
+> 전 플랫폼 아티팩트를 빌드해 릴리스를 **바로 공개**합니다.
 > ```bash
 > git tag v0.1.0 && git push origin v0.1.0
 > ```
 > 서명/스토어 제출은 아래 플랫폼별 절차에 따라 인증서·계정이 필요합니다.
+
+## 저장소와 공개 URL
+
+소스·이력·릴리스·문의·정책 문서가 모두 이 저장소(`MinaryHub/Kerminal`, MIT 라이선스)
+하나에 있습니다. 예전의 배포 전용 저장소 `MinaryHub/Kerminal.Release` 는 더 이상
+쓰지 않습니다.
+
+앱과 스토어 리스팅이 쓰는 URL — 저장소 이름은 대소문자를 구분하지 않으므로
+`kerminal` 은 이 저장소입니다:
+
+```
+MinaryHub/kerminal/releases/latest/download/latest.json   인앱 업데이트 확인
+MinaryHub/kerminal/blob/main/PRIVACY.md                   MS Store 정책 10.5.1
+MinaryHub/kerminal/issues                                 앱 내 "Report an issue"
+```
+
+### ⚠️ `knoxxr/kerminal` 이라는 이름의 저장소를 다시 만들지 마세요
+
+두 저장소는 원래 개인 계정(`knoxxr`) 소유였고 2026-08-19 에 `MinaryHub` 조직으로
+이전했습니다. **1.2.1 이하로 배포된 앱은 예전 주소로 업데이트를 확인합니다**:
+
+```
+github.com/knoxxr/kerminal/releases/latest/download/latest.json
+```
+
+GitHub 의 저장소 이전 리다이렉트가 이 요청을 살려주고 있습니다. 그런데 **옛 이름으로
+새 저장소를 만들면 그 리다이렉트가 즉시 끊깁니다** — 이미 배포된 앱들이 영구히
+업데이트를 못 받게 됩니다.
+
+### 릴리스 게시
+
+`release.yml`의 `release` 잡이 기본 `GITHUB_TOKEN`으로 이 저장소에 릴리스를
+만들고 아티팩트와 `latest.json`을 첨부해 **바로 공개**합니다. 공개 즉시 앱이 새 버전을 감지합니다. 별도 PAT는 필요 없습니다 — 예전에 쓰던
+`RELEASE_PAT` 시크릿은 삭제해도 됩니다.
+
+빌드는 성공했고 게시만 실패했다면 아티팩트가 남아 있으므로 재빌드가 필요 없습니다:
+
+```bash
+gh run rerun <run-id> --failed
+```
+
+릴리스 노트는 `CHANGELOG.md`에서 해당 버전 절을 잘라 씁니다.
+
+### CI 비용
+
+공개 저장소라 GitHub 호스팅 러너는 무료입니다. 그래도 빌드 시간을 줄이려고 PR·푸시
+CI는 **Linux(web·apk)까지만** 돌리고, Windows·macOS 빌드는 `build-desktop` 잡으로
+분리해 **수동 실행**으로 뒀습니다. 데스크톱 컴파일은 태그 릴리스에서 실제로 검증되며,
+플랫폼 채널·창 설정·파일 선택기·경로 처리를 건드렸다면 태그 전에 한 번 돌려보세요:
+
+```bash
+gh workflow run ci.yml --ref <브랜치>
+```
 
 ## 버전 올리기
 `pubspec.yaml`의 `version: 0.1.0+1` (= `버전+빌드번호`)을 수정하고
@@ -67,11 +120,11 @@ dart run msix:create        # → build/windows/x64/runner/Release/*.msix
     ```powershell
     Import-Certificate -FilePath .\kerminal-codesign.cer -CertStoreLocation Cert:\LocalMachine\Root
     ```
-    그런 다음 `kerminal.msix` 실행 → 게시자가 "Minary"로 확인되어 설치됩니다.
+    그런 다음 `kerminal-sideload.msix` 실행 → 게시자가 "Minary"로 확인되어 설치됩니다.
     (GUI로는 .cer 우클릭 → 인증서 설치 → 로컬 컴퓨터 → "신뢰할 수 있는 루트 인증 기관".)
 - **정식 서명/스토어:** 상용 Authenticode(OV/EV) 인증서로 교체하거나 Microsoft Store
   제출(`dart run msix:create --store`, 파트너 센터 계정) 시 경고 없이 설치됩니다.
-  - 태그 릴리스에 붙는 `kerminal.msix`는 **직접 배포 전용**입니다. 스토어는 이 패키지의
+  - 태그 릴리스에 붙는 `kerminal-sideload.msix`는 **직접 배포 전용**입니다. 스토어는 이 패키지의
     identity·게시자·버전(4번째 자리)을 모두 거부하므로, 제출본은 Actions의
     **Store package (MSIX)** 워크플로(`.github/workflows/store-package.yml`)로 따로
     만드세요. 입력값과 제출 절차는 [STORE_SUBMISSION.md](STORE_SUBMISSION.md) 참고.

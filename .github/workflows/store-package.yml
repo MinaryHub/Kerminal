@@ -78,11 +78,16 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           $defs = "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL) --dart-define=SUPABASE_ANON_KEY=$($env:SUPABASE_ANON_KEY)"
+          # Distinct filename on purpose: the release workflow also produces
+          # `kerminal.msix` (sideload-signed, X.Y.Z.B version), and uploading
+          # that one to Partner Center has been rejected more than once. The
+          # name should say which package this is.
           dart run msix:create --store `
             --version "$env:VERSION" `
             --identity-name "$env:IDENTITY_NAME" `
             --publisher "$env:PUBLISHER" `
             --publisher-display-name "$env:PUBLISHER_DISPLAY_NAME" `
+            --output-name "kerminal-store" `
             --windows-build-args "$defs"
 
       # Print exactly the four fields Partner Center validates, so a mismatch is
