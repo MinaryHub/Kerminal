@@ -54,6 +54,32 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # Sign release APK/AAB with the stable release key. Without this the build
+      # falls back to the debug keystore, which runners generate fresh each time —
+      # every release would carry a different signature and Android would refuse
+      # to update one build with the next (INSTALL_FAILED_UPDATE_INCOMPATIBLE).
+      - if: matrix.target == 'android'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set — refusing to ship a debug-signed release."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/android/kerminal-release.p12"
+          # storeFile must be absolute: build.gradle.kts resolves a relative path
+          # against android/app/, not android/. PKCS#12 uses one password for
+          # both the store and the key.
+          cat > android/key.properties <<EOF
+          storeFile=$GITHUB_WORKSPACE/android/kerminal-release.p12
+          storeType=PKCS12
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEYSTORE_PASSWORD
+          EOF
+
       - run: flutter pub get
       - run: dart run build_runner build
       # Regenerate per-platform launcher icons from assets/icon/app_icon.png so
@@ -99,15 +125,24 @@ jobs:
           # Publish the public cert so users can trust it once before installing.
           Copy-Item windows/kerminal-codesign.cer dist/ -ErrorAction SilentlyContinue
 
-      # --- macOS: .app bundle (zip). DMG needs signing/notarization (see DEPLOY.md) ---
+      # --- macOS: .dmg with an /Applications shortcut ---
+      # A zip of the .app gave no way to *replace* an existing install: users
+      # unpacked it wherever the download landed and ended up with two copies.
+      # A disk image makes the drag-onto-Applications flow explicit, which is
+      # how macOS updates are normally applied.
       - if: matrix.target == 'macos'
         run: |
           flutter build macos --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
           mkdir -p dist
-          cd build/macos/Build/Products/Release
-          zip -r -y "$GITHUB_WORKSPACE/dist/kerminal-macos.zip" kerminal.app
+          staging="$(mktemp -d)"
+          cp -R build/macos/Build/Products/Release/kerminal.app "$staging/"
+          # The symlink is what turns the window into "drag here to install".
+          ln -s /Applications "$staging/Applications"
+          hdiutil create -volname Kerminal -srcfolder "$staging" \
+            -ov -format UDZO "$GITHUB_WORKSPACE/dist/kerminal-macos.dmg"
+          rm -rf "$staging"
 
       # --- Linux: bundle tarball ---
       - if: matrix.target == 'linux'
@@ -164,7 +199,7 @@ jobs:
             "notes": "Kerminal ${VERSION}. See the release page for details.",
             "downloads": {
               "windows": "${BASE}/kerminal.msix",
-              "macos": "${BASE}/kerminal-macos.zip",
+              "macos": "${BASE}/kerminal-macos.dmg",
               "linux": "${BASE}/kerminal-linux-x64.tar.gz",
               "android": "${BASE}/kerminal.apk"
             }

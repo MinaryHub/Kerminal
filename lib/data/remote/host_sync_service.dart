@@ -92,6 +92,19 @@ class HostInvitation {
   final String summary;
 }
 
+/// Outcome of a [HostSyncService.reconcile] pass.
+class SyncResult {
+  const SyncResult({required this.shareInfo, this.undecryptableHostIds = const {}});
+
+  /// Per-host ownership/sharing labels for the list.
+  final Map<String, HostShareInfo> shareInfo;
+
+  /// Hosts skipped because their content key or ciphertext could not be read.
+  /// Surfaced so a permanently broken row is visible instead of silently
+  /// disappearing from the list on every sync.
+  final Set<String> undecryptableHostIds;
+}
+
 /// End-to-end-encrypted sync + sharing of hosts.
 ///
 /// A host is encrypted with a stable per-host content key; that key is sealed
@@ -179,23 +192,38 @@ class HostSyncService {
   }
 
   /// Appends an applied version snapshot for history/rollback.
+  ///
+  /// The number is MAX+1, which two devices saving at once can both pick. The
+  /// database rejects the duplicate (unique on host_id, version), so retry with
+  /// a freshly read number instead of leaving two rows that would break
+  /// [rollbackTo] forever. History is not worth failing a save over either, so
+  /// after the retries the operation is simply skipped.
   Future<void> _recordVersion(String hostId, String op, String? ciphertext) async {
-    final maxRow = await _client
-        .from('host_versions')
-        .select('version')
-        .eq('host_id', hostId)
-        .order('version', ascending: false)
-        .limit(1)
-        .maybeSingle();
-    final next = ((maxRow?['version'] as int?) ?? 0) + 1;
-    await _client.from('host_versions').insert({
-      'host_id': hostId,
-      'version': next,
-      'editor_id': _me,
-      'op': op,
-      'ciphertext': ciphertext,
-      'status': 'applied',
-    });
+    const attempts = 3;
+    for (var attempt = 1; attempt <= attempts; attempt++) {
+      final maxRow = await _client
+          .from('host_versions')
+          .select('version')
+          .eq('host_id', hostId)
+          .order('version', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      final next = ((maxRow?['version'] as int?) ?? 0) + 1;
+      try {
+        await _client.from('host_versions').insert({
+          'host_id': hostId,
+          'version': next,
+          'editor_id': _me,
+          'op': op,
+          'ciphertext': ciphertext,
+          'status': 'applied',
+        });
+        return;
+      } on PostgrestException catch (e) {
+        // 23505 = unique_violation: someone took this number first.
+        if (e.code != '23505' || attempt == attempts) return;
+      }
+    }
   }
 
   /// Invites [colleague] to a host I own by sealing its content key to their
@@ -345,7 +373,11 @@ class HostSyncService {
 
   /// Pulls remote changes into local storage, uploads any local-only host, and
   /// returns per-host share info for the UI labels.
-  Future<Map<String, HostShareInfo>> reconcile() async {
+  ///
+  /// Individual hosts that fail are skipped and reported in
+  /// [SyncResult.undecryptableHostIds] — a single bad row must not stop the
+  /// rest of the list from syncing.
+  Future<SyncResult> reconcile() async {
     final hostRows = await _client
         .from('hosts')
         .select('id, owner_id, ciphertext, deleted');
@@ -389,6 +421,7 @@ class HostSyncService {
 
     final info = <String, HostShareInfo>{};
     final remoteIds = <String>{};
+    final undecryptable = <String>{};
 
     for (final row in hostRows) {
       final id = row['id'] as String;
@@ -407,12 +440,21 @@ class HostSyncService {
       // invitation; until then it lives in [pendingInvitations], not here.
       if (!ownedByMe && !(myKeyAccepted[id] ?? true)) continue;
 
-      final contentKey = IdentityCrypto.unseal(
-        base64.decode(sealed),
-        _identity.privateKey,
-      );
-      final payload = HostCodec.decrypt(row['ciphertext'] as String, contentKey);
-      await _hosts.applyRemote(id, payload);
+      // Per host, not per sync: one unreadable row (corrupt ciphertext, or a
+      // key sealed to an identity we no longer hold) must not abort the whole
+      // reconcile and leave every other host un-synced.
+      try {
+        final contentKey = IdentityCrypto.unseal(
+          base64.decode(sealed),
+          _identity.privateKey,
+        );
+        final payload =
+            HostCodec.decrypt(row['ciphertext'] as String, contentKey);
+        await _hosts.applyRemote(id, payload);
+      } catch (_) {
+        undecryptable.add(id);
+        continue;
+      }
 
       info[id] = HostShareInfo(
         ownedByMe: ownedByMe,
@@ -423,13 +465,19 @@ class HostSyncService {
 
     // Upload hosts that have never been synced (e.g. a pre-existing local list).
     for (final host in await _repo.getHosts()) {
-      if (!remoteIds.contains(host.id)) {
+      if (remoteIds.contains(host.id)) continue;
+      // Also per host: a local row whose remote copy we simply cannot see (for
+      // instance a share that was revoked) would collide on the primary key,
+      // and that must not discard the rest of the pass.
+      try {
         await pushHost(host);
         info[host.id] = const HostShareInfo(ownedByMe: true);
+      } catch (_) {
+        undecryptable.add(host.id);
       }
     }
 
-    return info;
+    return SyncResult(shareInfo: info, undecryptableHostIds: undecryptable);
   }
 
   // --- History & rollback (P5) ---

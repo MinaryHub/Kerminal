@@ -7,6 +7,7 @@ import '../../application/sessions.dart';
 import '../../core/os_user.dart';
 import '../../domain/entities/ssh_connection_request.dart';
 import '../terminal/host_key_prompt.dart';
+import '../terminal/user_info_prompt.dart';
 
 /// Ad-hoc connection form. Lets the user connect to a server without saving it
 /// first. Opens the connection as a new terminal tab.
@@ -69,6 +70,7 @@ class _QuickConnectPageState extends ConsumerState<QuickConnectPage> {
     ref.read(sessionsProvider.notifier).open(
           request,
           verifyHostKey: buildHostKeyVerifier(ref.read(knownHostsProvider)),
+          respondToPrompts: buildUserInfoResponder(),
         );
     context.goNamed('terminal');
   }
@@ -76,12 +78,20 @@ class _QuickConnectPageState extends ConsumerState<QuickConnectPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quick Connect')),
+      appBar: AppBar(title: const Text('Connect without saving')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Say up front how this differs from adding a server, so the user
+            // isn't surprised when the details are gone next time.
+            Text(
+              'A one-off session. Nothing is saved — to keep these details for '
+              'next time, add the server instead.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -89,8 +99,8 @@ class _QuickConnectPageState extends ConsumerState<QuickConnectPage> {
                   child: TextFormField(
                     controller: _host,
                     decoration: const InputDecoration(
-                      labelText: 'Host',
-                      hintText: 'example.com',
+                      labelText: 'Address',
+                      hintText: 'example.com or 192.168.0.10',
                     ),
                     autocorrect: false,
                     validator: (v) =>
@@ -182,7 +192,7 @@ class _QuickConnectPageState extends ConsumerState<QuickConnectPage> {
             FilledButton.icon(
               onPressed: _submit,
               icon: const Icon(Icons.terminal),
-              label: const Text('Connect'),
+              label: const Text('Connect now'),
             ),
           ],
         ),

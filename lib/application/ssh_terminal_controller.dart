@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:xterm/xterm.dart';
 
+import '../data/ssh/sftp_service.dart';
 import '../data/ssh/ssh_service.dart';
 import '../domain/entities/ssh_connection_request.dart';
 
@@ -30,6 +31,7 @@ class SshTerminalController extends ChangeNotifier {
 
   SshConnectionRequest? _request;
   HostKeyVerifier? _verifyHostKey;
+  SshUserInfoResponder? _respondToPrompts;
 
   /// Bumped for every dial. Callbacks (notably `done`) captured by a superseded
   /// link compare against it so a stale teardown can't clobber the live one.
@@ -45,14 +47,23 @@ class SshTerminalController extends ChangeNotifier {
 
   bool get isConnected => _status == SshConnectionStatus.connected;
 
+  /// Opens file transfer on the live connection, or null when not connected.
+  Future<SftpService?> openFiles() async {
+    final session = _session;
+    if (session == null || !isConnected) return null;
+    return session.openSftp();
+  }
+
   /// Opens the connection described by [request] and streams it into
   /// [terminal].
   Future<void> connect(
     SshConnectionRequest request, {
     HostKeyVerifier? verifyHostKey,
+    SshUserInfoResponder? respondToPrompts,
   }) {
     _request = request;
     _verifyHostKey = verifyHostKey;
+    _respondToPrompts = respondToPrompts;
     if (_status == SshConnectionStatus.connecting || isConnected) {
       return _inFlight ?? Future<void>.value();
     }
@@ -119,6 +130,7 @@ class SshTerminalController extends ChangeNotifier {
         terminal: terminal,
         request: request,
         verifyHostKey: _verifyHostKey,
+        respondToPrompts: _respondToPrompts,
       );
       if (_disposed || generation != _generation) {
         session.close();

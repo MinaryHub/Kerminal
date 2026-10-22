@@ -8,6 +8,8 @@ import '../../application/sessions.dart';
 import '../../application/settings.dart';
 import '../../application/ssh_terminal_controller.dart';
 import '../../domain/entities/ssh_connection_request.dart';
+import 'remote_files_sheet.dart';
+import 'terminal_palettes.dart';
 import 'terminal_toolbar.dart';
 
 /// On desktop/web, printable characters arrive as hardware key events; xterm's
@@ -96,10 +98,17 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
   @override
   Widget build(BuildContext context) {
     final fontSize = ref.watch(settingsProvider.select((s) => s.fontSize));
+    final palette = TerminalPalette.byId(
+      ref.watch(settingsProvider.select((s) => s.terminalPaletteId)),
+    );
 
     return Column(
       children: [
-        _TargetHeader(request: widget.session.request, accent: widget.accent),
+        _TargetHeader(
+          request: widget.session.request,
+          accent: widget.accent,
+          onOpenFiles: _openFiles,
+        ),
         // Only the status strip rebuilds on connection-state changes.
         AnimatedBuilder(
           animation: _controller,
@@ -114,7 +123,7 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
                 );
               case SshConnectionStatus.closed:
                 return _ReconnectBanner(
-                  message: 'Session closed.',
+                  message: 'Disconnected.',
                   onReconnect: _reconnect,
                 );
               case SshConnectionStatus.idle:
@@ -126,7 +135,9 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: TerminalThemes.defaultTheme.background,
+              // Must match the terminal's own background, or the inset padding
+              // below shows as a stripe in a different colour.
+              color: palette.theme.background,
               border: Border(
                 left: BorderSide(color: widget.accent, width: 3),
               ),
@@ -141,6 +152,7 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
               focusNode: _focusNode,
               autofocus: true,
               hardwareKeyboardOnly: _useHardwareKeyboard,
+              theme: palette.theme,
               textStyle: TerminalStyle(fontSize: fontSize),
             ),
           ),
@@ -154,16 +166,48 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
 
   void _reconnect() =>
       ref.read(sessionsProvider.notifier).reconnect(widget.session.id);
+
+  /// Opens file transfer on this session's live connection.
+  Future<void> _openFiles() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      final sftp = await _controller.openFiles();
+      if (sftp == null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Connect first to browse files.')),
+        );
+        return;
+      }
+      if (!navigator.mounted) return;
+      await showRemoteFiles(
+        navigator.context,
+        sftp: sftp,
+        title: widget.session.request.displayName,
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not open files: $e')),
+      );
+    }
+  }
 }
 
 /// Always-visible bar naming the host this terminal is connected to, tinted
 /// with the session's accent color — so it is clear which host you're typing
 /// to when several tabs are open.
 class _TargetHeader extends StatelessWidget {
-  const _TargetHeader({required this.request, required this.accent});
+  const _TargetHeader({
+    required this.request,
+    required this.accent,
+    required this.onOpenFiles,
+  });
 
   final SshConnectionRequest request;
   final Color accent;
+
+  /// Opens the remote file browser for this connection.
+  final VoidCallback onOpenFiles;
 
   @override
   Widget build(BuildContext context) {
@@ -199,6 +243,14 @@ class _TargetHeader extends StatelessWidget {
               ),
             ),
           ),
+          // Sits in the header rather than the key toolbar: it belongs to the
+          // connection, not to typing, and here it is visible without scrolling.
+          IconButton(
+            tooltip: 'Browse files on this server',
+            icon: const Icon(Icons.folder_outlined, size: 18),
+            visualDensity: VisualDensity.compact,
+            onPressed: onOpenFiles,
+          ),
         ],
       ),
     );
@@ -218,7 +270,11 @@ class _ReconnectBanner extends StatelessWidget {
       leading: const Icon(Icons.info_outline),
       content: Text(message),
       actions: [
-        TextButton(onPressed: onReconnect, child: const Text('Reconnect')),
+        TextButton.icon(
+          onPressed: onReconnect,
+          icon: const Icon(Icons.refresh, size: 18),
+          label: const Text('Try again'),
+        ),
       ],
     );
   }

@@ -1,10 +1,11 @@
 name: Windows sideload (MSIX)
 
 # Builds a SIGNED, directly-installable Windows MSIX and leaves it as a workflow
-# artifact — it is deliberately NOT attached to a GitHub Release, because
-# Windows ships through the Microsoft Store (see release.yml / store-package.yml)
-# and a public download would undercut the paid Store listing. Artifacts require
-# a signed-in GitHub account to download and expire on their own.
+# artifact. Use it to get a running build of an arbitrary branch without cutting
+# a release — screenshots, manual testing, handing a build to someone.
+#
+# Tagged releases already attach a signed msix (see release.yml), so this is for
+# work in progress rather than a distribution channel.
 #
 # Use it for: screenshots and manual testing of the current build, or handing a
 # build to someone directly. For Store submissions use store-package.yml.

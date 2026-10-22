@@ -4,6 +4,7 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:xterm/xterm.dart';
 
 import '../../domain/entities/ssh_connection_request.dart';
+import 'sftp_service.dart';
 
 /// Verifies a server's host key. Returns true to accept the connection.
 /// [fingerprint] is the OpenSSH `SHA256:...` fingerprint of the host key.
@@ -12,6 +13,29 @@ typedef HostKeyVerifier = Future<bool> Function(
   int port,
   String keyType,
   String fingerprint,
+);
+
+/// One thing the server is asking the user for during keyboard-interactive
+/// authentication — typically a one-time code.
+class SshPrompt {
+  const SshPrompt({required this.text, required this.echo});
+
+  /// The server's prompt, e.g. `Verification code: `.
+  final String text;
+
+  /// Whether the typed answer may be shown. False for passwords.
+  final bool echo;
+}
+
+/// Answers a server's keyboard-interactive challenge (2FA/OTP, expired
+/// password, …). Returns one answer per prompt in order, or null to give up.
+///
+/// Mirrors dartssh2's handler but in the app's own types, so presentation code
+/// can build the dialog without importing the SSH library.
+typedef SshUserInfoResponder = Future<List<String>?> Function(
+  String name,
+  String instruction,
+  List<SshPrompt> prompts,
 );
 
 /// A live SSH shell bound to an [xterm] [Terminal].
@@ -33,6 +57,7 @@ class SshSession {
     required Terminal terminal,
     required SshConnectionRequest request,
     HostKeyVerifier? verifyHostKey,
+    SshUserInfoResponder? respondToPrompts,
     Duration timeout = const Duration(seconds: 15),
     // Mobile carriers and NAT gateways drop idle TCP flows within a minute or
     // so, which is exactly what happens while the app sits in the background.
@@ -49,9 +74,13 @@ class SshSession {
       username: request.username,
       keepAliveInterval: keepAliveInterval,
       // dartssh2 passes (keyType, fingerprintBytes); the fingerprint is the
-      // OpenSSH "SHA256:..." string. Null verifier => trust on first use.
+      // OpenSSH "SHA256:..." string.
+      //
+      // With no verifier the connection is refused rather than trusting any
+      // key: every call site supplies one, and a future caller forgetting it
+      // should fail loudly instead of silently losing MITM protection.
       onVerifyHostKey: verifyHostKey == null
-          ? (type, fingerprint) => true
+          ? (type, fingerprint) => false
           : (type, fingerprint) => verifyHostKey(
                 request.host,
                 request.port,
@@ -67,6 +96,21 @@ class SshSession {
       onPasswordRequest: request.authKind == SshAuthKind.password
           ? () => request.password ?? ''
           : null,
+      // Servers that require a one-time code (or force a password change) use
+      // keyboard-interactive. Without a handler those servers simply cannot be
+      // reached — authentication fails with no way for the user to answer.
+      // The request/prompt types are not exported by dartssh2, so the
+      // parameter type comes from its handler typedef by inference.
+      onUserInfoRequest: respondToPrompts == null
+          ? null
+          : (req) => respondToPrompts(
+                req.name,
+                req.instruction,
+                [
+                  for (final p in req.prompts)
+                    SshPrompt(text: p.promptText, echo: p.echo),
+                ],
+              ),
     );
 
     try {
@@ -101,6 +145,12 @@ class SshSession {
   }
 
   bool get isClosed => _client.isClosed;
+
+  /// Opens an SFTP channel on this connection for file transfer.
+  ///
+  /// Reuses the authenticated session rather than dialling again, so the user is
+  /// not asked for credentials (or a 2FA code) a second time.
+  Future<SftpService> openSftp() async => SftpService(await _client.sftp());
 
   /// Round-trips a keep-alive to find out whether the link is *really* alive.
   ///

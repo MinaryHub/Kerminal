@@ -7,11 +7,15 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../application/account_providers.dart';
+import '../../core/donation_config.dart';
 import '../../application/providers.dart';
 import '../../application/settings.dart';
 import '../../data/crypto/backup_crypto.dart';
+import '../../data/remote/feedback_service.dart';
 import '../../application/update_providers.dart';
 import '../../application/update_service.dart';
+import '../terminal/terminal_palettes.dart';
+import 'contact_sheet.dart';
 
 /// App preferences: terminal theme mode and font size, persisted immediately.
 class SettingsPage extends ConsumerWidget {
@@ -78,35 +82,256 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              r'$ echo "font preview"',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: settings.fontSize,
-                color: Colors.greenAccent,
-              ),
-            ),
+          const SizedBox(height: 12),
+          _PalettePicker(
+            selectedId: settings.terminalPaletteId,
+            fontSize: settings.fontSize,
+            onSelected: controller.setTerminalPalette,
           ),
           const SizedBox(height: 28),
-          Text('About & Updates',
+          Text('Version & updates',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           const _UpdateSection(),
           const SizedBox(height: 28),
-          Text('Backup & Share',
-              style: Theme.of(context).textTheme.titleMedium),
+          Text('Backup', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           const _BackupSection(),
+          const SizedBox(height: 28),
+          Text('Support', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          const _SupportSection(),
+          // Hidden entirely when no donation page is configured, so a build
+          // without one never shows a dead link.
+          if (DonationConfig.isConfigured) ...[
+            const SizedBox(height: 28),
+            Text(
+              'Support development',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            const _DonationSection(),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// Optional, no-strings-attached donation link.
+///
+/// Deliberately gives nothing back: Microsoft Store policy 10.8.x allows a
+/// third-party payment page for voluntary donations, but requires the Store's
+/// in-app purchase API the moment a donation grants any digital good — a
+/// feature, a badge, removing ads. Saying so plainly also sets expectations.
+class _DonationSection extends StatelessWidget {
+  const _DonationSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Kerminal is built and maintained by one person. If it saves you '
+          'time, you can chip in — entirely optional, and it unlocks nothing: '
+          'the app is exactly the same either way.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final uri = Uri.parse(DonationConfig.url);
+            // Opens the payment provider's own page, which handles identifying
+            // itself and confirming the amount — the app never sees card data.
+            final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+            if (!ok) {
+              messenger.showSnackBar(
+                SnackBar(content: Text('Could not open ${DonationConfig.url}')),
+              );
+            }
+          },
+          icon: const Icon(Icons.favorite_outline),
+          label: const Text('Support development…'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Terminal colour-scheme picker that renders each option in its own colours —
+/// a name like "Gruvbox" means nothing without seeing it, and the sample doubles
+/// as the font-size preview.
+class _PalettePicker extends StatelessWidget {
+  const _PalettePicker({
+    required this.selectedId,
+    required this.fontSize,
+    required this.onSelected,
+  });
+
+  final String selectedId;
+  final double fontSize;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Colours', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        for (final palette in TerminalPalette.all) ...[
+          _PaletteOption(
+            palette: palette,
+            selected: palette.id == selectedId,
+            fontSize: fontSize,
+            onTap: () => onSelected(palette.id),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _PaletteOption extends StatelessWidget {
+  const _PaletteOption({
+    required this.palette,
+    required this.selected,
+    required this.fontSize,
+    required this.onTap,
+  });
+
+  final TerminalPalette palette;
+  final bool selected;
+  final double fontSize;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = palette.theme;
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? scheme.primary : Theme.of(context).dividerColor,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // A realistic prompt line, so the colours are judged the way
+                  // they will actually be seen.
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'user@host',
+                          style: TextStyle(color: theme.green),
+                        ),
+                        TextSpan(
+                          text: ':~\$ ',
+                          style: TextStyle(color: theme.foreground),
+                        ),
+                        TextSpan(
+                          text: 'git status',
+                          style: TextStyle(color: theme.brightBlue),
+                        ),
+                      ],
+                    ),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: fontSize,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      for (final c in [
+                        theme.red,
+                        theme.yellow,
+                        theme.green,
+                        theme.cyan,
+                        theme.blue,
+                        theme.magenta,
+                      ])
+                        Container(width: 14, height: 8, color: c),
+                      const SizedBox(width: 8),
+                      Text(
+                        palette.name,
+                        style: TextStyle(
+                          color: theme.foreground,
+                          fontSize: 12,
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (selected) Icon(Icons.check, size: 18, color: theme.green),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// In-app inquiry form. Hidden in local-only builds: the message is relayed by a
+/// server-side function (which holds the destination address), so without cloud
+/// credentials there is nothing to send through.
+class _SupportSection extends ConsumerWidget {
+  const _SupportSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canSend = ref.watch(feedbackServiceProvider) != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          canSend
+              ? 'Send a question, bug report or request straight to the '
+                  'maintainer.'
+              : 'This build has no cloud connection, so in-app messages are '
+                  'unavailable. Please open an issue on GitHub instead.',
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            if (canSend)
+              FilledButton.tonalIcon(
+                onPressed: () => showContactSheet(context),
+                icon: const Icon(Icons.mail_outline),
+                label: const Text('Contact us'),
+              ),
+            if (canSend) const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: () => launchUrl(
+                Uri.parse('https://github.com/knoxxr/kerminal/issues'),
+                mode: LaunchMode.externalApplication,
+              ),
+              icon: const Icon(Icons.bug_report_outlined),
+              label: const Text('GitHub Issues'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -123,9 +348,9 @@ class _BackupSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Export your hosts to a passphrase-encrypted file you can keep or '
-          'move to another device, then import it with the same passphrase. '
-          'Passwords and private keys are included.',
+          'Save all your servers to one file, protected by a passphrase you '
+          'choose. Passwords and SSH keys are included, so keep the file safe. '
+          'Use it to move to another device or to recover after reinstalling.',
         ),
         const SizedBox(height: 12),
         Row(
@@ -133,13 +358,13 @@ class _BackupSection extends ConsumerWidget {
             FilledButton.tonalIcon(
               onPressed: () => _export(context, ref),
               icon: const Icon(Icons.lock_outline),
-              label: const Text('Encrypted export'),
+              label: const Text('Save to file…'),
             ),
             const SizedBox(width: 12),
             OutlinedButton.icon(
               onPressed: () => _import(context, ref),
               icon: const Icon(Icons.file_open_outlined),
-              label: const Text('Import'),
+              label: const Text('Restore from file…'),
             ),
           ],
         ),

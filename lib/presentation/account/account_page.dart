@@ -123,7 +123,10 @@ class _AuthFormState extends ConsumerState<_AuthForm> {
         TextField(
           controller: _password,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'Password'),
+          decoration: const InputDecoration(
+            labelText: 'Account password',
+            helperText: 'For signing in',
+          ),
         ),
         if (_signUp) ...[
           const SizedBox(height: 12),
@@ -132,9 +135,10 @@ class _AuthFormState extends ConsumerState<_AuthForm> {
             obscureText: true,
             decoration: const InputDecoration(
               labelText: 'Encryption passphrase',
-              helperText: 'Encrypts your data end-to-end. '
-                  'If you lose it, your synced data cannot be recovered.',
-              helperMaxLines: 3,
+              helperText: 'A second, separate secret that encrypts your servers '
+                  'on this device before they are uploaded. We never receive it, '
+                  'so if you lose it your synced servers cannot be recovered.',
+              helperMaxLines: 4,
             ),
           ),
         ],
@@ -179,6 +183,10 @@ class _UnlockViewState extends ConsumerState<_UnlockView> {
       await ref
           .read(accountControllerProvider.notifier)
           .unlock(_passphrase.text);
+    } on MissingEncryptionKeyException {
+      // Not a wrong passphrase — there is nothing to unlock yet. Setting a key
+      // up is destructive for anything encrypted under a previous one, so ask.
+      if (mounted) await _offerToCreateKey();
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -190,15 +198,61 @@ class _UnlockViewState extends ConsumerState<_UnlockView> {
     }
   }
 
+  Future<void> _offerToCreateKey() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.key),
+        title: const Text('Set up encryption for this account?'),
+        content: const Text(
+          'This account has no encryption key yet, so there is nothing to '
+          'decrypt with a passphrase.\n\n'
+          'Creating one now uses the passphrase you just typed. If this account '
+          'previously had a key, anything already synced — including servers '
+          'colleagues shared with you — will no longer be readable.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Create key'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref
+          .read(accountControllerProvider.notifier)
+          .createEncryptionKey(_passphrase.text);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not set up: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
       children: [
         Text('Signed in as ${widget.email}'),
+        const SizedBox(height: 8),
+        Text(
+          'Enter your encryption passphrase to decrypt your synced servers on '
+          'this device. This is the second secret you chose when signing up — '
+          'not your account password.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: 20),
         TextField(
           controller: _passphrase,
           obscureText: true,
+          autofocus: true,
           onSubmitted: (_) => _unlock(),
           decoration: const InputDecoration(labelText: 'Encryption passphrase'),
         ),
@@ -211,7 +265,7 @@ class _UnlockViewState extends ConsumerState<_UnlockView> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Unlock'),
+              : const Text('Decrypt my servers'),
         ),
         const SizedBox(height: 12),
         TextButton(
@@ -236,7 +290,7 @@ class _SignedInView extends ConsumerWidget {
         ListTile(
           leading: const Icon(Icons.verified_user_outlined),
           title: Text(email),
-          subtitle: const Text('Signed in · encryption unlocked'),
+          subtitle: const Text('Signed in · servers decrypted on this device'),
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
@@ -248,17 +302,25 @@ class _SignedInView extends ConsumerWidget {
               const SnackBar(content: Text('Syncing…')),
             );
             try {
-              final info = await sync.reconcile();
-              ref.read(shareInfoProvider.notifier).set(info);
+              final result = await sync.reconcile();
+              ref.read(shareInfoProvider.notifier).set(result.shareInfo);
+              final skipped = result.undecryptableHostIds.length;
               messenger.showSnackBar(
-                const SnackBar(content: Text('Hosts synced.')),
+                SnackBar(
+                  content: Text(
+                    skipped == 0
+                        ? 'Servers synced.'
+                        : 'Servers synced — $skipped could not be decrypted '
+                            'and were skipped.',
+                  ),
+                ),
               );
             } catch (e) {
               messenger.showSnackBar(SnackBar(content: Text('Sync failed: $e')));
             }
           },
           icon: const Icon(Icons.sync),
-          label: const Text('Sync hosts now'),
+          label: const Text('Sync servers now'),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(

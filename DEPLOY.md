@@ -92,9 +92,15 @@ dart run msix:create        # → build/windows/x64/runner/Release/*.msix
 빌드 환경: macOS + Xcode.
 ```bash
 flutter build macos --release
-# DMG 생성 (create-dmg 또는 flutter_distributor)
-flutter_distributor release --name macos --jobs macos-dmg
 ```
+릴리스 CI는 추가 의존성 없이 `hdiutil`로 DMG를 만듭니다(`release.yml`의 macos 단계):
+앱과 `/Applications` 심볼릭 링크를 담은 폴더를 압축 이미지로 굽습니다.
+
+> **왜 zip이 아니라 DMG인가:** zip은 `.app`을 내려받은 자리에 풀어놓을 뿐이라, 기존
+> 설치를 **교체할 방법이 드러나지 않습니다** — 사용자는 다운로드 폴더와
+> `/Applications`에 복사본을 각각 갖게 됩니다. 번들 ID가 같아 데이터는 공유되지만
+> 어느 것이 최신인지 알 수 없습니다. DMG의 `/Applications` 링크는 드래그하면
+> "바꾸기"를 묻는 익숙한 흐름을 만듭니다.
 - **App Sandbox 비활성화(중요):** `macos/Runner/*.entitlements`에서 샌드박스를
   꺼둔 상태입니다. 이는 Apple 팀 서명 없이 ad-hoc 서명으로 직접 배포할 때
   `flutter_secure_storage`의 키체인 접근(-34018 `errSecMissingEntitlement` 방지)과
@@ -140,7 +146,25 @@ flutter_distributor release --name linux --jobs linux-appimage
    flutter build apk --release         # 직접 배포용 .apk
    ```
 - **스토어:** Google Play Console 계정($25 1회), Play App Signing 권장.
-- CI에서는 `key.properties`와 `.jks`를 시크릿에서 생성해 주입합니다.
+- **릴리스 서명 (필수):** 릴리스 CI가 시크릿에서 `key.properties`와 키스토어를 만들어
+  주입합니다. 시크릿이 없으면 워크플로가 **의도적으로 실패**합니다 — 디버그 서명본이
+  릴리스로 나가는 것을 막기 위함입니다.
+
+  | 시크릿 | 내용 |
+  |---|---|
+  | `ANDROID_KEYSTORE_BASE64` | PKCS#12 키스토어(base64) |
+  | `ANDROID_KEYSTORE_PASSWORD` | 키스토어·키 비밀번호(PKCS#12는 동일) |
+  | `ANDROID_KEY_ALIAS` | 키 별칭 (`kerminal`) |
+
+  > ⚠️ **이 키를 잃으면 안 됩니다.** 안드로이드는 서명이 다른 APK로 덮어쓰기를
+  > 막으므로(`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), 키가 바뀌면 모든 사용자가
+  > **앱을 제거하고 재설치**해야 하고 저장된 호스트를 잃습니다. Play Store에서는
+  > 업데이트 자체가 거부됩니다. 키스토어 파일과 비밀번호를 안전한 곳에 백업하세요.
+
+  > **2026-08-06 이전 릴리스 주의:** 그때까지의 APK는 시크릿이 없어 **디버그 키**로
+  > 서명됐고, 그 키는 빌드마다 달랐습니다. 그래서 구버전 위에 신버전을 설치할 수
+  > 없었습니다. 이번 릴리스 키로 전환하면서 **한 번은 제거 후 재설치**가 필요하며,
+  > 이후 업데이트는 정상 동작합니다.
 
 ## iOS (App Store)
 빌드 환경: macOS + Xcode + Apple Developer 계정.
