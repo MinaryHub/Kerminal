@@ -67,3 +67,7 @@ flutter run                   # 실행 (기기/플랫폼 선택)
 flutter analyze
 flutter test
 ```
+
+## 라이선스
+
+MIT — [LICENSE](LICENSE) 참조.
