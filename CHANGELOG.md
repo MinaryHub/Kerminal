@@ -5,6 +5,13 @@ All notable changes to Kerminal are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.5.0]
+
+### Fixed
+- **업데이트 알림이 사라지지 않던 문제를 고쳤습니다.** v1.2.3·v1.4.9 빌드는 앱 안에서
+  버전이 1.2.2로 표시되어, 설치한 뒤에도 "업데이트 있음"이 계속 떴습니다. 1.5.0부터는
+  앱이 올바른 버전을 표시하고 최신 상태로 인식합니다.
+
 ### Changed
 - **소스를 MIT 라이선스 오픈소스로 공개했습니다.** 소스·릴리스·문의·정책 문서가 모두
   `github.com/MinaryHub/Kerminal` 한 곳에 있습니다. 다운로드·업데이트·문의 주소는

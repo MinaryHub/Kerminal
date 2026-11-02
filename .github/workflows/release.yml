@@ -11,8 +11,32 @@ permissions:
   contents: write
 
 jobs:
+  # The app reports pubspec's `version:` (builds don't pass --build-name), while
+  # latest.json advertises the tag. If they differ, every install of this
+  # release reports an older version and keeps offering itself as an update,
+  # and the MSIX reuses an existing package version (0x80073CFB). Fail early.
+  verify-version:
+    name: Verify tag matches pubspec version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare tag and pubspec version
+        run: |
+          PUBSPEC="$(sed -nE 's/^version:[[:space:]]*([^+[:space:]]+).*/\1/p' pubspec.yaml)"
+          echo "pubspec version: ${PUBSPEC}"
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            echo "Not a tag build (${GITHUB_REF_NAME}); skipping the comparison."
+            exit 0
+          fi
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "${TAG}" != "${PUBSPEC}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match pubspec version ${PUBSPEC}. Bump 'version:' in pubspec.yaml (and its +build number), commit, then tag that commit."
+            exit 1
+          fi
+
   build:
     name: Build ${{ matrix.target }}
+    needs: verify-version
     strategy:
       fail-fast: false
       matrix:
