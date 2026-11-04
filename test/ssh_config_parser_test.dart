@@ -125,6 +125,51 @@ Host prod
     expect(hosts.single.port, 22);
   });
 
+  test('Match directives do not leak into the next Host', () {
+    final hosts = parser.parse('''
+Match host *.corp
+  User corp
+  Port 2200
+
+Host web
+  HostName web.example.com
+''');
+    expect(hosts.single.alias, 'web');
+    expect(hosts.single.username, isEmpty);
+    expect(hosts.single.port, 22);
+  });
+
+  test('directives before the first Host do not attach to it', () {
+    final hosts = parser.parse('''
+User global
+Host web
+  HostName web.example.com
+''');
+    expect(hosts.single.username, isEmpty);
+  });
+
+  test('negated patterns are not imported as hosts', () {
+    final hosts = parser.parse('''
+Host !bastion web
+  HostName web.example.com
+''');
+    expect(hosts.map((h) => h.alias), ['web']);
+  });
+
+  test('an out-of-range Port falls back to 22', () {
+    final hosts = parser.parse('Host prod\n  HostName e.com\n  Port 99999\n');
+    expect(hosts.single.port, 22);
+  });
+
+  test('the first value of a repeated directive wins, as in OpenSSH', () {
+    final hosts = parser.parse('''
+Host prod
+  HostName first.example.com
+  HostName second.example.com
+''');
+    expect(hosts.single.hostname, 'first.example.com');
+  });
+
   test('an empty or junk file yields no hosts', () {
     expect(parser.parse(''), isEmpty);
     expect(parser.parse('\n\n# only comments\n'), isEmpty);

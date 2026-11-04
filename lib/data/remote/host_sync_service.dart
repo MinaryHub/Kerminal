@@ -231,6 +231,10 @@ class HostSyncService {
   /// in the colleague's list until they accept it. Throws if the host hasn't
   /// been synced yet.
   Future<void> shareHost(String hostId, PublicIdentity colleague) async {
+    // Upserting my own row as 'pending' would hide the host from my own list.
+    if (colleague.userId == _me) {
+      throw StateError('You cannot share a host with yourself.');
+    }
     final contentKey = await _contentKeyFor(hostId);
     if (contentKey == null) {
       throw StateError('Host is not synced yet — sync it first.');
@@ -332,12 +336,99 @@ class HostSyncService {
         .eq('recipient_id', _me);
   }
 
+  /// Removes [recipientId]'s access to a host I own.
+  ///
+  /// Deleting their key row alone is not enough: they may have kept the
+  /// content key, which would still open every later edit. So the host is
+  /// re-encrypted under a fresh key, sealed again for everyone who keeps
+  /// access, and its history re-encrypted to match — all in one database
+  /// transaction (`rotate_host_key`), so a failure leaves nothing half-done.
   Future<void> unshareHost(String hostId, String recipientId) async {
-    await _client
+    // Group unsharing calls this for every host in the group; one the person
+    // was never on needs no rotation.
+    final row = await _client
         .from('host_keys')
-        .delete()
+        .select('recipient_id')
         .eq('host_id', hostId)
-        .eq('recipient_id', recipientId);
+        .eq('recipient_id', recipientId)
+        .maybeSingle();
+    if (row == null) return;
+
+    final oldKey = await _contentKeyFor(hostId);
+    if (oldKey == null) {
+      throw StateError('Host is not synced yet — sync it first.');
+    }
+    final newKey = SymmetricCrypto.randomKey();
+
+    final hostRow = await _client
+        .from('hosts')
+        .select('ciphertext')
+        .eq('id', hostId)
+        .single();
+    final payload =
+        HostCodec.decrypt(hostRow['ciphertext'] as String, oldKey);
+
+    // Everyone who keeps access, with their public keys.
+    final keyRows = await _client
+        .from('host_keys')
+        .select('recipient_id')
+        .eq('host_id', hostId)
+        .neq('recipient_id', recipientId);
+    final others = [
+      for (final r in keyRows)
+        if (r['recipient_id'] as String != _me) r['recipient_id'] as String,
+    ];
+    final publicKeys = <String, Uint8List>{_me: _identity.publicKey};
+    if (others.isNotEmpty) {
+      final profs = await _client
+          .from('profiles')
+          .select('id, public_key')
+          .inFilter('id', others);
+      for (final p in profs) {
+        publicKeys[p['id'] as String] =
+            base64.decode(p['public_key'] as String);
+      }
+    }
+    final missing = others.where((id) => !publicKeys.containsKey(id));
+    if (missing.isNotEmpty) {
+      throw StateError(
+        'Could not read the public key of every remaining recipient.',
+      );
+    }
+
+    // History snapshots were encrypted with the old key; re-encrypt them so
+    // history and rollback keep working. One that cannot be read is left as
+    // is — it was unreadable before as well.
+    final versionRows = await _client
+        .from('host_versions')
+        .select('id, ciphertext')
+        .eq('host_id', hostId);
+    final versions = <Map<String, String>>[];
+    for (final v in versionRows) {
+      final ciphertext = v['ciphertext'] as String?;
+      if (ciphertext == null) continue;
+      try {
+        final snapshot = HostCodec.decrypt(ciphertext, oldKey);
+        versions.add({
+          'id': v['id'] as String,
+          'ciphertext': HostCodec.encrypt(snapshot, newKey),
+        });
+      } catch (_) {/* see above */}
+    }
+
+    await _client.rpc('rotate_host_key', params: {
+      'p_host': hostId,
+      'p_remove': recipientId,
+      'p_ciphertext': HostCodec.encrypt(payload, newKey),
+      'p_keys': [
+        for (final e in publicKeys.entries)
+          {
+            'recipient': e.key,
+            'sealed': base64.encode(IdentityCrypto.seal(newKey, e.value)),
+          },
+      ],
+      'p_versions': versions,
+    });
   }
 
   /// The colleagues a host is currently shared with (excludes me), each tagged
