@@ -43,6 +43,17 @@ class SftpService {
 
   final SftpClient _sftp;
 
+  /// The absolute form of [path] as the server resolves it (`.` → the home
+  /// directory). Browsing starts from this so every path shown is absolute.
+  Future<String> resolve(String path) async => RemotePath.normalize(
+        await _guard(() => _sftp.absolute(path), 'Open $path'),
+      );
+
+  /// Closes the SFTP channel. Each [SSHClient.sftp] call opens a new channel
+  /// and servers cap channels per connection (OpenSSH: 10), so a browser that
+  /// never closed its channel stopped opening after a handful of visits.
+  Future<void> close() => _sftp.close();
+
   /// Lists [path], directories first then names, case-insensitively.
   ///
   /// `.` and `..` are dropped: navigation is done with the breadcrumb and the

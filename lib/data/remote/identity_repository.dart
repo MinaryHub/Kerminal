@@ -66,13 +66,17 @@ class IdentityRepository {
 
   /// Looks up a colleague by email so their public key can be sealed to.
   /// Returns null when no such account exists.
+  ///
+  /// Goes through the `find_profile_by_email` function rather than reading
+  /// `profiles`: the table only shows people you already share with, so the
+  /// user list cannot be enumerated, while an exact address still resolves.
   Future<PublicIdentity?> findByEmail(String email) async {
-    final row = await _client
-        .from('profiles')
-        .select('id, email, public_key')
-        .eq('email', normalizeEmail(email))
-        .maybeSingle();
-    if (row == null) return null;
+    final rows = await _client.rpc(
+      'find_profile_by_email',
+      params: {'p_email': normalizeEmail(email)},
+    ) as List<dynamic>;
+    if (rows.isEmpty) return null;
+    final row = rows.first as Map<String, dynamic>;
     return PublicIdentity(
       userId: row['id'] as String,
       email: row['email'] as String,

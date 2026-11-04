@@ -366,3 +366,206 @@ end $$;
 
 create unique index if not exists host_versions_host_version_key
   on public.host_versions (host_id, version);
+
+-- =============================================================================
+-- Sharing hardening (2026-11).
+--
+-- 1. host_keys: the recipient policy allowed UPDATE of every column, checking
+--    only `recipient_id = auth.uid()`. A sharee could therefore repoint their
+--    row at another host of the same owner (`set host_id = <revoked host>`) and
+--    regain access after being unshared, or grant themselves `can_edit`.
+--    A trigger now pins the row's identity, limits a recipient to accepting
+--    (pending -> accepted), and stops an owner from accepting on a
+--    recipient's behalf (planting hosts straight into someone's list).
+-- 2. profiles.email was whatever the client sent, so anyone could claim a
+--    colleague's address before that colleague signed up and receive the
+--    secrets shared to it. It is now always the authenticated account's email.
+-- 3. profiles were readable by every signed-in user, i.e. the whole user list.
+--    Reads are limited to yourself and people you share a host with; finding
+--    someone new goes through find_profile_by_email (exact match only).
+-- 4. rotate_host_key: unsharing removes the recipient's key AND re-encrypts the
+--    host under a fresh content key in one transaction, so a removed sharee
+--    who kept the old key cannot read later edits.
+-- =============================================================================
+
+-- 1. host_keys ----------------------------------------------------------------
+create or replace function public.host_keys_guard() returns trigger as $$
+begin
+  -- Service-role / dashboard writes carry no JWT.
+  if auth.uid() is null then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    -- Only the recipient can accept an invitation; the owner's own key row is
+    -- the one row that starts out accepted.
+    if new.recipient_id <> auth.uid() then
+      new.status := 'pending';
+    end if;
+    return new;
+  end if;
+
+  if new.host_id <> old.host_id or new.recipient_id <> old.recipient_id then
+    raise exception 'host_keys: host_id and recipient_id cannot be changed'
+      using errcode = '42501';
+  end if;
+
+  if public.is_host_owner(old.host_id) then
+    -- The owner may re-seal keys and change can_edit, but not accept for
+    -- someone else.
+    if new.recipient_id <> auth.uid()
+       and new.status = 'accepted' and old.status <> 'accepted' then
+      raise exception 'host_keys: only the recipient can accept an invitation'
+        using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  -- The recipient: accepting is the only change allowed.
+  if new.sealed_content_key is distinct from old.sealed_content_key
+     or new.can_edit is distinct from old.can_edit
+     or new.created_at is distinct from old.created_at
+     or (new.status is distinct from old.status
+         and not (old.status = 'pending' and new.status = 'accepted')) then
+    raise exception 'host_keys: a recipient can only accept an invitation'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists host_keys_guard on public.host_keys;
+create trigger host_keys_guard before insert or update on public.host_keys
+  for each row execute function public.host_keys_guard();
+
+-- 2. profiles.email -----------------------------------------------------------
+create or replace function public.profiles_force_email() returns trigger as $$
+declare
+  account_email text;
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  select lower(u.email) into account_email from auth.users u where u.id = auth.uid();
+  if account_email is null then
+    raise exception 'profiles: the signed-in account has no email'
+      using errcode = '42501';
+  end if;
+  new.email := account_email;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists profiles_force_email on public.profiles;
+create trigger profiles_force_email before insert or update on public.profiles
+  for each row execute function public.profiles_force_email();
+
+-- Repair rows written before the trigger. Two passes: a squatted address is
+-- moved out of the way first, so the real owner's row can take it without
+-- tripping the unique index.
+do $$
+begin
+  update public.profiles p
+     set email = 'mismatch+' || p.id::text || '@invalid'
+    from auth.users u
+   where u.id = p.id and u.email is not null and p.email <> lower(u.email);
+  update public.profiles p
+     set email = lower(u.email)
+    from auth.users u
+   where u.id = p.id and u.email is not null
+     and p.email = 'mismatch+' || p.id::text || '@invalid';
+end $$;
+
+-- 3. profiles visibility ------------------------------------------------------
+create or replace function public.shares_host_with(other uuid) returns boolean as $$
+  select exists (
+    select 1
+      from public.host_keys mine
+      join public.host_keys theirs on theirs.host_id = mine.host_id
+     where mine.recipient_id = auth.uid() and theirs.recipient_id = other
+  ) or exists (
+    select 1
+      from public.hosts h
+      join public.host_keys k on k.host_id = h.id
+     where (h.owner_id = auth.uid() and k.recipient_id = other)
+        or (h.owner_id = other and k.recipient_id = auth.uid())
+  );
+$$ language sql security definer stable set search_path = public;
+
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles
+  for select to authenticated
+  using (id = auth.uid() or public.shares_host_with(id));
+
+create or replace function public.find_profile_by_email(p_email text)
+returns table (id uuid, email text, public_key text) as $$
+  select p.id, p.email, p.public_key
+    from public.profiles p
+   where auth.uid() is not null
+     and p.email = lower(trim(p_email))
+   limit 1;
+$$ language sql security definer stable set search_path = public;
+
+revoke all on function public.find_profile_by_email(text) from public, anon;
+grant execute on function public.find_profile_by_email(text) to authenticated;
+
+-- 4. key rotation on unshare --------------------------------------------------
+-- Runs as the caller (RLS and the guards above still apply) and in a single
+-- transaction: either the recipient is gone and everything is re-encrypted
+-- under the new key, or nothing changed.
+--   p_keys     : [{"recipient": uuid, "sealed": text}] for EVERY remaining row
+--   p_versions : [{"id": uuid, "ciphertext": text}] history re-encrypted
+create or replace function public.rotate_host_key(
+  p_host uuid,
+  p_remove uuid,
+  p_ciphertext text,
+  p_keys jsonb,
+  p_versions jsonb
+) returns void as $$
+declare
+  k jsonb;
+  v jsonb;
+begin
+  if not public.is_host_owner(p_host) then
+    raise exception 'rotate_host_key: not the owner of this host'
+      using errcode = '42501';
+  end if;
+
+  if p_remove is not null then
+    delete from public.host_keys
+     where host_id = p_host and recipient_id = p_remove;
+  end if;
+
+  -- Every remaining key must be re-sealed, or someone would be left holding a
+  -- key that no longer opens the host (or the client raced a new share).
+  if exists (
+    select 1 from public.host_keys hk
+     where hk.host_id = p_host
+       and hk.recipient_id not in (
+         select (x->>'recipient')::uuid from jsonb_array_elements(p_keys) x
+       )
+  ) then
+    raise exception 'rotate_host_key: sharing changed meanwhile, try again'
+      using errcode = '40001';
+  end if;
+
+  update public.hosts set ciphertext = p_ciphertext where id = p_host;
+
+  for k in select * from jsonb_array_elements(p_keys) loop
+    update public.host_keys
+       set sealed_content_key = k->>'sealed'
+     where host_id = p_host and recipient_id = (k->>'recipient')::uuid;
+  end loop;
+
+  for v in select * from jsonb_array_elements(p_versions) loop
+    update public.host_versions
+       set ciphertext = v->>'ciphertext'
+     where id = (v->>'id')::uuid and host_id = p_host;
+  end loop;
+end;
+$$ language plpgsql security invoker set search_path = public;
+
+revoke all on function public.rotate_host_key(uuid, uuid, text, jsonb, jsonb)
+  from public, anon;
+grant execute on function public.rotate_host_key(uuid, uuid, text, jsonb, jsonb)
+  to authenticated;

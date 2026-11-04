@@ -58,26 +58,47 @@ class SshConfigParser {
     String? proxyJump;
 
     void flush() {
-      if (aliases == null) return;
-      for (final alias in aliases!) {
-        // `Host *` and other patterns set defaults for real entries; importing
-        // them would create hosts nobody can connect to.
-        if (alias.contains('*') || alias.contains('?') || alias == '!') continue;
-        final resolved = (hostname ?? alias).trim();
+      // Values are always dropped at a block boundary, even when the block was
+      // a `Match` or the directives came before the first `Host`: otherwise
+      // they leaked into the next `Host` entry.
+      final blockAliases = aliases;
+      final blockHostname = hostname;
+      final blockPort = port;
+      final blockUser = user;
+      final blockIdentity = identityFile;
+      final blockJump = proxyJump;
+      aliases = null;
+      hostname = port = user = identityFile = proxyJump = null;
+      if (blockAliases == null) return;
+
+      // A missing, junk or out-of-range port falls back to the default rather
+      // than saving a host that can never connect.
+      final rawPort = int.tryParse(blockPort ?? '');
+      final parsedPort =
+          rawPort != null && rawPort >= 1 && rawPort <= 65535 ? rawPort : 22;
+
+      for (final alias in blockAliases) {
+        // `Host *` and other patterns set defaults for real entries, and
+        // `!name` excludes a host from the block; importing either would
+        // create hosts nobody can connect to.
+        if (alias.contains('*') ||
+            alias.contains('?') ||
+            alias.startsWith('!')) {
+          continue;
+        }
+        final resolved = (blockHostname ?? alias).trim();
         if (resolved.isEmpty) continue;
         hosts.add(
           SshConfigHost(
             alias: alias,
             hostname: resolved,
-            port: int.tryParse(port ?? '') ?? 22,
-            username: (user ?? '').trim(),
-            identityFile: identityFile?.trim(),
-            proxyJump: proxyJump?.trim(),
+            port: parsedPort,
+            username: (blockUser ?? '').trim(),
+            identityFile: blockIdentity?.trim(),
+            proxyJump: blockJump?.trim(),
           ),
         );
       }
-      aliases = null;
-      hostname = port = user = identityFile = proxyJump = null;
     }
 
     for (final raw in content.split('\n')) {
@@ -90,6 +111,7 @@ class SshConfigParser {
       final value = parts.skip(1).join(' ').trim();
       if (value.isEmpty) continue;
 
+      // As in OpenSSH, the first value given for a directive wins.
       switch (key) {
         case 'host':
           // A new block ends the previous one.
@@ -100,15 +122,15 @@ class SshConfigParser {
           // ending the current block stops their directives leaking into it.
           flush();
         case 'hostname':
-          hostname = _unquote(value);
+          hostname ??= _unquote(value);
         case 'port':
-          port = value;
+          port ??= value;
         case 'user':
-          user = _unquote(value);
+          user ??= _unquote(value);
         case 'identityfile':
-          identityFile = _unquote(value);
+          identityFile ??= _unquote(value);
         case 'proxyjump':
-          proxyJump = _unquote(value);
+          proxyJump ??= _unquote(value);
       }
     }
     flush();
