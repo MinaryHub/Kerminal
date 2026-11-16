@@ -5,6 +5,19 @@ All notable changes to Kerminal are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.0]
+
+### Added
+- **최근 접속**: 최근에 접속한 서버 5개가 목록 맨 위에 나옵니다(이 기기에만 저장).
+- **주소로 바로 접속**: 검색창에 `user@host:22` 나 `ssh -p 2222 user@host` 를 입력하면
+  "Connect to …"가 나타나고, Enter를 누르면 접속 화면이 채워진 채로 열립니다.
+- **`^C` 키**: 툴바 Ctrl 옆에 고정했습니다. 실행 중인 명령을 한 번에 멈춥니다.
+- **글자 크기**: 휴대폰은 두 손가락으로 벌리고 오므리고, 키보드는 Ctrl(⌘) + `=` / `-` / `0`.
+
+### Changed
+- Windows·Linux·Android 키보드에서 **Ctrl+A가 셸로 전달**됩니다(줄 맨 앞으로 이동).
+  전체 선택은 Ctrl+Shift+A, 복사는 Ctrl+Shift+C, 붙여넣기는 Ctrl+V 그대로입니다.
+
 ## [1.5.1]
 
 ### Security
