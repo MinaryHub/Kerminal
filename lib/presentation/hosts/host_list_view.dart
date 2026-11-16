@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../application/account_providers.dart';
 import '../../application/known_hosts.dart';
 import '../../application/providers.dart';
+import '../../application/recent_hosts.dart';
 import '../../application/sessions.dart';
+import '../../core/address_parser.dart';
 import '../../data/remote/host_sync_service.dart';
 import '../../domain/entities/host.dart';
+import '../../domain/entities/ssh_connection_request.dart';
 import '../terminal/host_key_prompt.dart';
 import '../terminal/user_info_prompt.dart';
 import 'history_sheets.dart';
@@ -49,6 +52,8 @@ class _HostListViewState extends ConsumerState<HostListView> {
             verifyHostKey: verifier,
             respondToPrompts: buildUserInfoResponder(),
           );
+      // Best effort: a failed write must not block the connection.
+      ref.read(recentHostsProvider.notifier).markUsed(host.id).ignore();
       if (widget.navigateAfterConnect) {
         router.goNamed('terminal');
       } else {
@@ -57,6 +62,23 @@ class _HostListViewState extends ConsumerState<HostListView> {
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Cannot connect: $e')));
     }
+  }
+
+  /// Opens the quick-connect form filled in from an address typed into the
+  /// search box (`user@host:port`, or a pasted `ssh …` command). Only the
+  /// password or key is left to enter.
+  void _connectTyped() {
+    final typed = parseAddress(_query);
+    if (typed == null) return;
+    context.pushNamed(
+      'connect',
+      extra: SshConnectionRequest(
+        host: typed.host,
+        port: typed.port,
+        username: typed.username ?? '',
+        authKind: SshAuthKind.password,
+      ),
+    );
   }
 
   Future<void> _confirmDelete(Host host) async {
@@ -196,6 +218,7 @@ class _HostListViewState extends ConsumerState<HostListView> {
               ),
             ),
             onChanged: (v) => setState(() => _query = v),
+            onSubmitted: (_) => _connectTyped(),
           ),
         ),
         Expanded(
@@ -203,13 +226,44 @@ class _HostListViewState extends ConsumerState<HostListView> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (list) {
-              if (list.isEmpty) return const _EmptyState();
+              final typed = parseAddress(_query);
+              if (list.isEmpty && typed == null) return const _EmptyState();
               final grouped = _grouped(list);
-              if (grouped.isEmpty) {
+
+              Widget tile(Host host) => _HostTile(
+                    host: host,
+                    share: shareInfo[host.id],
+                    signedIn: signedIn,
+                    onTap: () => _connect(host),
+                    onEdit: () => context.pushNamed('editHost', extra: host),
+                    onDelete: () => _confirmDelete(host),
+                    onShare: () => showShareHostSheet(context, host),
+                    onCopy: () => _copyHost(host),
+                    onHistory: () => showHistorySheet(context, host),
+                  );
+
+              // Recent hosts only while not searching: a search already
+              // narrows the list, and showing a host twice would confuse.
+              final byId = {for (final h in list) h.id: h};
+              final recent = _query.trim().isEmpty
+                  ? recentIds(ref.watch(recentHostsProvider), byId.keys)
+                  : const <String>[];
+
+              if (grouped.isEmpty && typed == null) {
                 return const Center(child: Text('Nothing matches your search.'));
               }
               return ListView(
                 children: [
+                  if (typed != null)
+                    _ConnectTypedTile(address: typed, onTap: _connectTyped),
+                  if (recent.isNotEmpty) ...[
+                    const _SectionHeader(
+                      icon: Icons.history,
+                      title: 'Recent',
+                    ),
+                    for (final id in recent) tile(byId[id]!),
+                    const Divider(height: 16),
+                  ],
                   for (final entry in grouped.entries) ...[
                     _GroupHeader(
                       name: entry.key,
@@ -237,19 +291,7 @@ class _HostListViewState extends ConsumerState<HostListView> {
                           : null,
                     ),
                     if (!_collapsed.contains(entry.key))
-                      for (final host in entry.value)
-                        _HostTile(
-                          host: host,
-                          share: shareInfo[host.id],
-                          signedIn: signedIn,
-                          onTap: () => _connect(host),
-                          onEdit: () =>
-                              context.pushNamed('editHost', extra: host),
-                          onDelete: () => _confirmDelete(host),
-                          onShare: () => showShareHostSheet(context, host),
-                          onCopy: () => _copyHost(host),
-                          onHistory: () => showHistorySheet(context, host),
-                        ),
+                      for (final host in entry.value) tile(host),
                   ],
                 ],
               );
@@ -669,6 +711,55 @@ class _EmptyState extends StatelessWidget {
                 style: subtle, textAlign: TextAlign.center),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "Connect to user@host" — shown when the search text is an address.
+class _ConnectTypedTile extends StatelessWidget {
+  const _ConnectTypedTile({required this.address, required this.onTap});
+
+  final ParsedAddress address;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Icon(Icons.bolt, color: scheme.primary),
+      title: Text('Connect to $address'),
+      subtitle: const Text('Without saving · Enter to continue'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+}
+
+/// A small heading above a list section (e.g. "Recent").
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(color: color),
+          ),
+        ],
       ),
     );
   }
