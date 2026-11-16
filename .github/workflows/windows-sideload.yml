@@ -34,6 +34,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Pinned: a new stable can break the build by itself (3.50 deprecated
+          # package:flutter/material.dart, failing `flutter analyze`). Bump on
+          # purpose, together with any code changes it needs.
+          flutter-version: 3.47.9
           cache: true
 
       - run: flutter pub get
