@@ -33,6 +33,12 @@ class IdentityRepository {
   /// through this, at the single point where the value reaches the database.
   static String normalizeEmail(String email) => email.trim().toLowerCase();
 
+  /// True when [e] means a database function does not exist yet — the app was
+  /// updated before `supabase/schema.sql` was re-applied. Callers then fall
+  /// back to the older behaviour so the app works with either schema.
+  static bool isMissingFunction(PostgrestException e) =>
+      e.code == 'PGRST202' || e.code == '42883';
+
   /// Creates/updates the caller's public profile.
   Future<void> upsertProfile({
     required String userId,
@@ -71,12 +77,23 @@ class IdentityRepository {
   /// `profiles`: the table only shows people you already share with, so the
   /// user list cannot be enumerated, while an exact address still resolves.
   Future<PublicIdentity?> findByEmail(String email) async {
-    final rows = await _client.rpc(
-      'find_profile_by_email',
-      params: {'p_email': normalizeEmail(email)},
-    ) as List<dynamic>;
-    if (rows.isEmpty) return null;
-    final row = rows.first as Map<String, dynamic>;
+    Map<String, dynamic>? row;
+    try {
+      final rows = await _client.rpc(
+        'find_profile_by_email',
+        params: {'p_email': normalizeEmail(email)},
+      ) as List<dynamic>;
+      row = rows.isEmpty ? null : rows.first as Map<String, dynamic>;
+    } on PostgrestException catch (e) {
+      if (!isMissingFunction(e)) rethrow;
+      // Older schema: profiles are still readable directly.
+      row = await _client
+          .from('profiles')
+          .select('id, email, public_key')
+          .eq('email', normalizeEmail(email))
+          .maybeSingle();
+    }
+    if (row == null) return null;
     return PublicIdentity(
       userId: row['id'] as String,
       email: row['email'] as String,

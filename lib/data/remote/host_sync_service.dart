@@ -416,6 +416,28 @@ class HostSyncService {
       } catch (_) {/* see above */}
     }
 
+    try {
+      await _rotate(hostId, recipientId, payload, newKey, publicKeys, versions);
+    } on PostgrestException catch (e) {
+      if (!IdentityRepository.isMissingFunction(e)) rethrow;
+      // Older schema without rotate_host_key: at least remove the key row, as
+      // before. Rotation starts working once schema.sql is re-applied.
+      await _client
+          .from('host_keys')
+          .delete()
+          .eq('host_id', hostId)
+          .eq('recipient_id', recipientId);
+    }
+  }
+
+  Future<void> _rotate(
+    String hostId,
+    String recipientId,
+    HostPayload payload,
+    Uint8List newKey,
+    Map<String, Uint8List> publicKeys,
+    List<Map<String, String>> versions,
+  ) async {
     await _client.rpc('rotate_host_key', params: {
       'p_host': hostId,
       'p_remove': recipientId,
