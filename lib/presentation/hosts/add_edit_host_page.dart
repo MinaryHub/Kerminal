@@ -92,7 +92,16 @@ class _AddEditHostPageState extends ConsumerState<AddEditHostPage> {
           await ref.read(hostSyncServiceProvider)?.pushHost(saved);
         } catch (_) {/* offline / locked — reconciled on next sync */}
       }
-      if (mounted) context.goNamed('hosts');
+      // Return to wherever the editor was opened from (the host list or a
+      // terminal's sidebar); replacing the stack threw the user out of the
+      // terminal.
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.goNamed('hosts');
+        }
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
@@ -156,8 +165,12 @@ class _AddEditHostPageState extends ConsumerState<AddEditHostPage> {
   @override
   Widget build(BuildContext context) {
     final editing = widget.isEditing;
+    // The saved secret belongs to the saved auth method. After switching
+    // method there is nothing to keep, so a new secret is required.
+    final keepSecret =
+        editing && widget.existing!.authMethod == _authMethod;
     final secretHint =
-        editing ? 'Leave blank to keep the saved secret' : null;
+        keepSecret ? 'Leave blank to keep the saved secret' : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -308,7 +321,7 @@ class _AddEditHostPageState extends ConsumerState<AddEditHostPage> {
                   ),
                 ),
                 validator: (v) {
-                  if (!editing && (v == null || v.isEmpty)) {
+                  if (!keepSecret && (v == null || v.isEmpty)) {
                     return 'Enter a password';
                   }
                   return null;
@@ -334,7 +347,7 @@ class _AddEditHostPageState extends ConsumerState<AddEditHostPage> {
                 minLines: 4,
                 maxLines: 8,
                 validator: (v) {
-                  if (!editing && (v == null || v.trim().isEmpty)) {
+                  if (!keepSecret && (v == null || v.trim().isEmpty)) {
                     return 'Paste a private key';
                   }
                   return null;

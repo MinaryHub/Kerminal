@@ -32,8 +32,9 @@ class _RemoteFilesPage extends StatefulWidget {
 }
 
 class _RemoteFilesPageState extends State<_RemoteFilesPage> {
-  /// Servers almost always land the user in their home directory, and '.' is
-  /// what SFTP resolves to it — better than guessing `/home/<user>`.
+  /// Starts as '.', which the server resolves to the home directory; replaced
+  /// by the absolute path as soon as it is known, so joins and breadcrumbs are
+  /// never built on a relative path.
   String _path = '.';
   List<RemoteEntry>? _entries;
   String? _error;
@@ -51,12 +52,11 @@ class _RemoteFilesPageState extends State<_RemoteFilesPage> {
       _error = null;
     });
     try {
-      final entries = await widget.sftp.list(path);
+      final resolved = await widget.sftp.resolve(path);
+      final entries = await widget.sftp.list(resolved);
       if (!mounted) return;
       setState(() {
-        // '.' resolves server-side; show where we actually are only once we
-        // know a concrete path.
-        _path = path == '.' ? '.' : RemotePath.normalize(path);
+        _path = resolved;
         _entries = entries;
       });
     } on SftpFailure catch (e) {
@@ -119,6 +119,9 @@ class _RemoteFilesPageState extends State<_RemoteFilesPage> {
       await _open(_path);
     } on SftpFailure catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      // Reading the local file can fail too (permissions, file gone).
+      messenger.showSnackBar(SnackBar(content: Text('Could not upload: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

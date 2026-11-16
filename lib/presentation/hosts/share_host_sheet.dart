@@ -117,6 +117,10 @@ class _ShareHostSheetState extends ConsumerState<_ShareHostSheet> {
       await sync.unshareHost(widget.host.id, who.identity.userId);
       final r = await sync.recipientsOf(widget.host.id);
       if (mounted) setState(() => _recipients = r);
+    } catch (e) {
+      if (mounted) {
+        _setMessage('Could not remove access: $e', isError: true);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

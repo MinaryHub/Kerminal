@@ -45,6 +45,10 @@ class SshTerminalController extends ChangeNotifier {
 
   bool _probing = false;
 
+  /// The remote shell exited (`exit`, logout). The user ended the session on
+  /// purpose, so it is not redialled automatically on resume.
+  bool _shellExited = false;
+
   bool get isConnected => _status == SshConnectionStatus.connected;
 
   /// Opens file transfer on the live connection, or null when not connected.
@@ -91,6 +95,7 @@ class SshTerminalController extends ChangeNotifier {
     if (_disposed || _request == null || _probing) return;
     if (_status == SshConnectionStatus.connecting) return;
     if (_status == SshConnectionStatus.idle) return;
+    if (_shellExited && !isConnected) return;
 
     _probing = true;
     try {
@@ -122,6 +127,7 @@ class SshTerminalController extends ChangeNotifier {
     final generation = ++_generation;
 
     _errorMessage = null;
+    _shellExited = false;
     _setStatus(SshConnectionStatus.connecting);
     terminal.write('Connecting to ${request.host}:${request.port} ...\r\n');
 
@@ -145,7 +151,13 @@ class SshTerminalController extends ChangeNotifier {
         if (_disposed || generation != _generation) return;
         _session = null;
         _setStatus(SshConnectionStatus.closed);
-        terminal.write('\r\n[Connection closed]\r\n');
+        final code = session.exitCode;
+        _shellExited = code != null;
+        terminal.write(
+          code == null
+              ? '\r\n[Connection closed]\r\n'
+              : '\r\n[Session ended (exit $code)]\r\n',
+        );
       });
     } catch (e) {
       if (_disposed || generation != _generation) return;

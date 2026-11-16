@@ -153,12 +153,24 @@ class _ShareGroupSheetState extends ConsumerState<_ShareGroupSheet> {
     if (sync == null) return;
     setState(() => _busy = true);
     try {
+      var failed = 0;
       for (final h in widget.hosts) {
         try {
           await sync.unshareHost(h.id, who.identity.userId);
-        } catch (_) {}
+        } catch (_) {
+          failed++;
+        }
       }
       await _load();
+      // A silent failure here would leave someone with access the owner
+      // believes was removed.
+      if (failed > 0 && mounted) {
+        _setMessage(
+          'Could not remove ${who.identity.email} from $failed host(s). '
+          'Try again.',
+          isError: true,
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

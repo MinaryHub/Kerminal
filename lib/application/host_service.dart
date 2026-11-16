@@ -59,6 +59,14 @@ class HostService {
     if (hasNewSecret || methodChanged) {
       await _clearSecrets(credentialId);
     }
+    // A key host edited with only a new passphrase (the key itself left blank
+    // to keep it) must still store that passphrase; it used to be dropped.
+    if (!hasNewSecret &&
+        !methodChanged &&
+        authMethod == AuthMethod.sshKey &&
+        (passphrase?.isNotEmpty ?? false)) {
+      await _vault.writeSecret(_passKey(credentialId), passphrase!);
+    }
     if (hasNewSecret) {
       if (authMethod == AuthMethod.password) {
         await _vault.writeSecret(_pwKey(credentialId), password!);

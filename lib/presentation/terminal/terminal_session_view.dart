@@ -179,12 +179,17 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
         );
         return;
       }
-      if (!navigator.mounted) return;
-      await showRemoteFiles(
-        navigator.context,
-        sftp: sftp,
-        title: widget.session.request.displayName,
-      );
+      try {
+        if (!navigator.mounted) return;
+        await showRemoteFiles(
+          navigator.context,
+          sftp: sftp,
+          title: widget.session.request.displayName,
+        );
+      } finally {
+        // Release the channel; a failure here only means the link is gone.
+        sftp.close().ignore();
+      }
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(content: Text('Could not open files: $e')),
