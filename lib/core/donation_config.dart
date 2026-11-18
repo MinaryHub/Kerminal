@@ -22,16 +22,11 @@ class DonationConfig {
     'DONATION_URL',
     // Public information, not a secret — fine to hard-code.
     //
-    // Empty on purpose right now. The only live sponsors page belongs to a
-    // personal account, and the project moved to the MinaryHub organization
-    // specifically so a personal handle is not published. MinaryHub cannot
-    // accept sponsorships yet (`hasSponsorsListing: false` — the org listing
-    // needs its own approval), so the section stays hidden rather than shipping
-    // a link that exposes what the move was meant to hide.
-    //
-    // One-line change once the org listing is live:
-    //   defaultValue: 'https://github.com/sponsors/MinaryHub',
-    defaultValue: '',
+    // The project lives under the MinaryHub organization so a personal handle
+    // is not published; donations go to the org's Sponsors page only.
+    // (Set ahead of the org listing's approval — until then the page may show
+    // as pending.)
+    defaultValue: 'https://github.com/sponsors/MinaryHub',
   );
 
   /// Whether this build has somewhere to send donors.
