@@ -207,6 +207,9 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
     // the one key that unlocks all the others.
     final pinned = <Widget>[
       _CtrlChip(state: _ctrl, onTap: _cycleCtrl),
+      // Ctrl+C is by far the most used combination (stop a command); one tap
+      // instead of Ctrl, then the soft keyboard's c.
+      _key('^C', 'Stop the running command (Ctrl+C)', () => _tapSeq('\x03')),
       _key('↑', 'Previous command', () => _tapKey(TerminalKey.arrowUp)),
       _key('↓', 'Next command', () => _tapKey(TerminalKey.arrowDown)),
       _key('Tab', 'Complete or indent', () => _tapKey(TerminalKey.tab)),

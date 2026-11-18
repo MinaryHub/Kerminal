@@ -1,6 +1,9 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xterm/xterm.dart';
 
@@ -27,6 +30,39 @@ final bool _useHardwareKeyboard = kIsWeb ||
 /// keeps a dedicated [FocusNode], so status changes during connect don't
 /// rebuild it or steal keyboard focus. Focus is (re)requested whenever a
 /// connection becomes ready.
+/// Copy/paste keys for Windows, Linux and Android hardware keyboards.
+///
+/// xterm's defaults bind Ctrl+A to select-all, which swallows the shell's
+/// "start of line" (^A) — one of the most used readline keys. Terminals use
+/// Ctrl+Shift for their own actions, so that is where select-all and copy go.
+/// Ctrl+V keeps pasting, as Windows users expect. Apple platforms keep the
+/// library defaults (⌘C/⌘V/⌘A), which never collide with the shell.
+final Map<ShortcutActivator, Intent>? _terminalShortcuts =
+    defaultTargetPlatform == TargetPlatform.macOS ||
+            defaultTargetPlatform == TargetPlatform.iOS
+        ? null
+        : {
+            const SingleActivator(
+              LogicalKeyboardKey.keyC,
+              control: true,
+              shift: true,
+            ): CopySelectionTextIntent.copy,
+            const SingleActivator(
+              LogicalKeyboardKey.keyV,
+              control: true,
+              shift: true,
+            ): const PasteTextIntent(SelectionChangedCause.keyboard),
+            const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+                const PasteTextIntent(SelectionChangedCause.keyboard),
+            const SingleActivator(
+              LogicalKeyboardKey.keyA,
+              control: true,
+              shift: true,
+            ): const SelectAllTextIntent(SelectionChangedCause.keyboard),
+          };
+
+const _defaultFontSize = 14.0;
+
 class TerminalSessionView extends ConsumerStatefulWidget {
   const TerminalSessionView({
     required this.session,
@@ -71,6 +107,39 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
     }
     // Became the selected tab → focus so typing goes here right away.
     if (!old.active && widget.active) _focusTerminal();
+  }
+
+  /// Ctrl (⌘ on Apple) with = / - / 0 makes the text larger, smaller, or the
+  /// default size — the same keys as browsers and editors.
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final keyboard = HardwareKeyboard.instance;
+    final modifier = defaultTargetPlatform == TargetPlatform.macOS
+        ? keyboard.isMetaPressed
+        : keyboard.isControlPressed;
+    if (!modifier || keyboard.isAltPressed) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    final settings = ref.read(settingsProvider.notifier);
+    final size = ref.read(settingsProvider).fontSize;
+    if (key == LogicalKeyboardKey.equal ||
+        key == LogicalKeyboardKey.add ||
+        key == LogicalKeyboardKey.numpadAdd) {
+      settings.setFontSize(size + 1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.minus ||
+        key == LogicalKeyboardKey.numpadSubtract) {
+      settings.setFontSize(size - 1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.digit0 || key == LogicalKeyboardKey.numpad0) {
+      settings.setFontSize(_defaultFontSize);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   void _onStatusChanged() {
@@ -147,13 +216,20 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
             // of the line height — doesn't butt up against the header and look
             // like it overlaps it.
             padding: const EdgeInsets.only(top: 6),
-            child: TerminalView(
-              _controller.terminal,
-              focusNode: _focusNode,
-              autofocus: true,
-              hardwareKeyboardOnly: _useHardwareKeyboard,
-              theme: palette.theme,
-              textStyle: TerminalStyle(fontSize: fontSize),
+            child: _PinchToZoom(
+              fontSize: fontSize,
+              onChanged: (size) =>
+                  ref.read(settingsProvider.notifier).setFontSize(size),
+              child: TerminalView(
+                _controller.terminal,
+                focusNode: _focusNode,
+                autofocus: true,
+                hardwareKeyboardOnly: _useHardwareKeyboard,
+                theme: palette.theme,
+                textStyle: TerminalStyle(fontSize: fontSize),
+                shortcuts: _terminalShortcuts,
+                onKeyEvent: _onKeyEvent,
+              ),
             ),
           ),
         ),
@@ -283,4 +359,69 @@ class _ReconnectBanner extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Two-finger pinch on the terminal changes the text size.
+///
+/// Listens to raw pointers instead of joining the gesture arena, so the
+/// terminal keeps its own scrolling and selection gestures untouched.
+class _PinchToZoom extends StatefulWidget {
+  const _PinchToZoom({
+    required this.fontSize,
+    required this.onChanged,
+    required this.child,
+  });
+
+  final double fontSize;
+  final ValueChanged<double> onChanged;
+  final Widget child;
+
+  @override
+  State<_PinchToZoom> createState() => _PinchToZoomState();
+}
+
+class _PinchToZoomState extends State<_PinchToZoom> {
+  final Map<int, Offset> _touches = {};
+  double? _startDistance;
+  double _startSize = _defaultFontSize;
+
+  double _distance() {
+    final points = _touches.values.toList();
+    return (points[0] - points[1]).distance;
+  }
+
+  void _onDown(PointerDownEvent e) {
+    if (e.kind != PointerDeviceKind.touch) return;
+    _touches[e.pointer] = e.position;
+    if (_touches.length == 2) {
+      _startDistance = _distance();
+      _startSize = widget.fontSize;
+    } else {
+      _startDistance = null; // Three fingers: not a pinch.
+    }
+  }
+
+  void _onMove(PointerMoveEvent e) {
+    if (!_touches.containsKey(e.pointer)) return;
+    _touches[e.pointer] = e.position;
+    final start = _startDistance;
+    if (_touches.length != 2 || start == null || start < 1) return;
+    final size =
+        (_startSize * _distance() / start).clamp(8.0, 28.0).roundToDouble();
+    if (size != widget.fontSize) widget.onChanged(size);
+  }
+
+  void _onEnd(PointerEvent e) {
+    _touches.remove(e.pointer);
+    if (_touches.length < 2) _startDistance = null;
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+        onPointerDown: _onDown,
+        onPointerMove: _onMove,
+        onPointerUp: _onEnd,
+        onPointerCancel: _onEnd,
+        child: widget.child,
+      );
 }
