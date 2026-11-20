@@ -5,6 +5,8 @@ All notable changes to Kerminal are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.1]
+
 ### Changed
 - **문의하기가 GitHub Issues로 연결됩니다.** 설정 → Support → **Contact us** 를 누르면
   앱 버전과 플랫폼이 채워진 새 이슈 화면이 열립니다(GitHub 계정 필요).
