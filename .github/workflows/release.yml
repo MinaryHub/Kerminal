@@ -2,13 +2,26 @@ name: Release
 
 # Tag a commit to build release artifacts for every platform and attach them
 # to a GitHub Release, published once every build has passed, e.g.:  git tag v0.1.0 && git push origin v0.1.0
+#
+# Or, without pushing a tag: Actions → Release → Run workflow on `main` with the
+# version (e.g. 1.6.1). The release, and its v<version> tag on the run's commit,
+# are created once every build has passed.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release from main, e.g. 1.6.1 (must equal pubspec version)'
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+env:
+  # The tag this run releases: the pushed tag, or v<version> for a manual run.
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
 
 jobs:
   # The app reports pubspec's `version:` (builds don't pass --build-name), while
@@ -24,13 +37,25 @@ jobs:
         run: |
           PUBSPEC="$(sed -nE 's/^version:[[:space:]]*([^+[:space:]]+).*/\1/p' pubspec.yaml)"
           echo "pubspec version: ${PUBSPEC}"
-          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
-            echo "Not a tag build (${GITHUB_REF_NAME}); skipping the comparison."
-            exit 0
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            # A manual release creates its tag, so it must come from main, name
+            # a plain X.Y.Z version, and not reuse an existing tag.
+            if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+              echo "::error::Run a manual release from main (this run is on ${GITHUB_REF})."
+              exit 1
+            fi
+            if ! printf '%s' "${RELEASE_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::Version must look like 1.6.1 (got '${RELEASE_TAG#v}')."
+              exit 1
+            fi
+            if git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" >/dev/null; then
+              echo "::error::Tag ${RELEASE_TAG} already exists."
+              exit 1
+            fi
           fi
-          TAG="${GITHUB_REF_NAME#v}"
+          TAG="${RELEASE_TAG#v}"
           if [ "${TAG}" != "${PUBSPEC}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match pubspec version ${PUBSPEC}. Bump 'version:' in pubspec.yaml (and its +build number), commit, then tag that commit."
+            echo "::error::Release ${RELEASE_TAG} does not match pubspec version ${PUBSPEC}. Bump 'version:' in pubspec.yaml (and its +build number), commit, then release that commit."
             exit 1
           fi
 
@@ -239,8 +264,8 @@ jobs:
       # releases/latest/download/latest.json, so older versions detect it.
       - name: Generate latest.json
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          BASE="${{ github.server_url }}/${PUBLIC_REPO}/releases/download/${GITHUB_REF_NAME}"
+          VERSION="${RELEASE_TAG#v}"
+          BASE="${{ github.server_url }}/${PUBLIC_REPO}/releases/download/${RELEASE_TAG}"
           cat > latest.json <<EOF
           {
             "version": "${VERSION}",
@@ -259,7 +284,7 @@ jobs:
       # purpose: the notes are written for users, not a list of commits.
       - name: Extract this version's CHANGELOG section
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           awk -v v="$VERSION" '
             $0 ~ "^## \\[" v "\\]" { inside = 1; next }
             inside && /^## \[/ { exit }
@@ -273,8 +298,10 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Kerminal ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Kerminal ${{ env.RELEASE_TAG }}
+          # A manual run has no tag yet; the release creates it on this commit.
+          target_commitish: ${{ github.sha }}
           body_path: notes.md
           files: |
             artifacts/**/*
