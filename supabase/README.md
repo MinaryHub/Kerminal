@@ -38,9 +38,14 @@ flutter run \
 
 VS Code를 쓴다면 `.vscode/launch.json`의 `args`에 `--dart-define=...`을 넣어두면 편합니다.
 
-## 5. 문의 기능 (Edge Function)
+## 5. 문의 기능 (Edge Function) — 앱에서는 더 이상 사용하지 않음
 
-앱 **설정 → Support → Contact us** 에서 보낸 문의를 메일로 전달합니다.
+> **1.6.1부터 앱의 Contact us는 GitHub Issues로 연결됩니다.** 앱은 이 함수를 호출하지
+> 않습니다. 이전 버전 앱 사용자를 위해 당분간 남겨 두고, 이전 버전이 충분히 줄면
+> `supabase functions delete send-feedback` 로 지워도 됩니다(`feedback` 테이블의 지난
+> 문의는 그대로 남습니다). 아래는 기존 설정 기록입니다.
+
+이전 버전 앱의 **설정 → Support → Contact us** 에서 보낸 문의를 메일로 전달합니다.
 **수신 주소는 이 저장소와 앱 어디에도 없습니다** — 함수의 서버 시크릿에만 둡니다.
 저장소가 공개이고 앱은 사용자에게 배포되므로, `mailto:` 링크나 앱 내 상수로 두면
 주소가 그대로 노출됩니다.

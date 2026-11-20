@@ -7,11 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// `PRIVACY.md` is the URL submitted to the Microsoft Store and is copied to the
 /// public repo on every release, so an address added here becomes permanently
 /// public — and it stays in that repo's git history even after removal.
-/// [feedback_service_test] guards `lib/` the same way; this covers the docs.
+/// [support_links_test] guards `lib/` the same way; this covers the docs.
 ///
-/// A privacy policy still needs a contact route: the in-app form
-/// (Settings → Support → Contact us) and GitHub Issues serve that without
-/// publishing anyone's address.
+/// A privacy policy still needs a contact route: GitHub Issues (Settings →
+/// Support → Contact us opens one) serves that without publishing anyone's
+/// address.
 void main() {
   test('published docs contain no email address', () {
     // Only files that actually reach the public repo. Internal notes (DEPLOY,
@@ -34,7 +34,7 @@ void main() {
     expect(
       offenders,
       isEmpty,
-      reason: 'Use the in-app contact form or Issues instead of an address:\n'
+      reason: 'Use GitHub Issues instead of an address:\n'
           '${offenders.join('\n')}',
     );
   });

@@ -5,6 +5,12 @@ All notable changes to Kerminal are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- **문의하기가 GitHub Issues로 연결됩니다.** 설정 → Support → **Contact us** 를 누르면
+  앱 버전과 플랫폼이 채워진 새 이슈 화면이 열립니다(GitHub 계정 필요).
+  이슈는 공개되므로 비밀번호·키·서버 주소는 적지 마세요.
+  메일 문의 양식은 없어졌습니다.
+
 ## [1.6.0]
 
 ### Added

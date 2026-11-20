@@ -11,11 +11,10 @@ import '../../core/donation_config.dart';
 import '../../application/providers.dart';
 import '../../application/settings.dart';
 import '../../data/crypto/backup_crypto.dart';
-import '../../data/remote/feedback_service.dart';
+import '../../application/support_links.dart';
 import '../../application/update_providers.dart';
 import '../../application/update_service.dart';
 import '../terminal/terminal_palettes.dart';
-import 'contact_sheet.dart';
 
 /// App preferences: terminal theme mode and font size, persisted immediately.
 class SettingsPage extends ConsumerWidget {
@@ -292,42 +291,54 @@ class _PaletteOption extends StatelessWidget {
   }
 }
 
-/// In-app inquiry form. Hidden in local-only builds: the message is relayed by a
-/// server-side function (which holds the destination address), so without cloud
-/// credentials there is nothing to send through.
+/// Questions, bug reports and requests go to GitHub Issues. The "Contact us"
+/// button opens a new issue with the app version and platform filled in.
 class _SupportSection extends ConsumerWidget {
   const _SupportSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canSend = ref.watch(feedbackServiceProvider) != null;
+    final scheme = Theme.of(context).colorScheme;
+    final version = ref.watch(appVersionLabelProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Text(
+          'Questions, bug reports and requests go to GitHub Issues '
+          '(a GitHub account is needed to post).',
+        ),
+        const SizedBox(height: 4),
         Text(
-          canSend
-              ? 'Send a question, bug report or request straight to the '
-                  'maintainer.'
-              : 'This build has no cloud connection, so in-app messages are '
-                  'unavailable. Please open an issue on GitHub instead.',
+          'Issues are public — never include passwords, keys or server '
+          'addresses.',
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            if (canSend)
-              FilledButton.tonalIcon(
-                onPressed: () => showContactSheet(context),
-                icon: const Icon(Icons.mail_outline),
-                label: const Text('Contact us'),
-              ),
-            if (canSend) const SizedBox(width: 12),
-            OutlinedButton.icon(
+            FilledButton.tonalIcon(
               onPressed: () => launchUrl(
-                Uri.parse('https://github.com/MinaryHub/kerminal/issues'),
+                newIssueUri(
+                  appVersion: version,
+                  platform: currentPlatformLabel(),
+                ),
                 mode: LaunchMode.externalApplication,
               ),
-              icon: const Icon(Icons.bug_report_outlined),
-              label: const Text('GitHub Issues'),
+              icon: const Icon(Icons.edit_note),
+              label: const Text('Contact us'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => launchUrl(
+                Uri.parse(kIssuesUrl),
+                mode: LaunchMode.externalApplication,
+              ),
+              icon: const Icon(Icons.forum_outlined),
+              label: const Text('Browse issues'),
             ),
           ],
         ),

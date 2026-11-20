@@ -126,11 +126,9 @@ OTP를 요구하는 서버가 필요합니다. 없으면 이 항목은 건너뛰
 
 ## H. 문의 기능
 
-1. 설정 → Support → Contact us → 메시지 입력 → Send
-2. ✅ **"Thanks — your message was sent."** → 메일함(스팸함 포함) 확인
-3. ⚠️ "received, but email delivery is currently failing" → 저장은 성공,
-   Resend 발신 주소 문제 (`supabase/README.md` §5 참고)
-4. ❌ 그 외 오류 → Edge Functions 로그의 해당 줄 필요
+1. 설정 → Support → **Contact us** → 브라우저에서 GitHub "New issue"가 열리는지
+2. 본문 끝에 `App: <버전> · Platform: <플랫폼>` 이 채워져 있는지
+3. **Browse issues** → 이슈 목록이 열리는지
 
 ---
 
