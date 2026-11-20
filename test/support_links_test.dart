@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerminal/data/remote/feedback_service.dart';
+import 'package:kerminal/application/support_links.dart';
 
 void main() {
   test('currentPlatformLabel returns a non-empty lowercase label', () {
@@ -10,16 +10,24 @@ void main() {
     expect(label, label.toLowerCase());
   });
 
-  test('FeedbackException surfaces its message', () {
-    const e = FeedbackException('nope');
-    expect(e.message, 'nope');
-    expect('$e', 'nope');
+  test('new issue link targets the repository and carries the environment', () {
+    final uri = newIssueUri(appVersion: '1.6.1+57', platform: 'android');
+    expect(uri.toString(), startsWith('$kIssuesUrl/new?'));
+    final body = uri.queryParameters['body']!;
+    expect(body, contains('App: 1.6.1+57'));
+    expect(body, contains('Platform: android'));
+    expect(body, contains('Issues are public'));
   });
 
-  // The destination address lives only in the Edge Function's FEEDBACK_TO
-  // secret. A `mailto:` link or a bundled constant would hand it to anyone who
-  // installs the app or reads this (public) repository, so guard against
-  // someone "simplifying" the flow later.
+  test('unknown environment is stated rather than left blank', () {
+    final body = newIssueUri().queryParameters['body']!;
+    expect(body, contains('App: unknown'));
+    expect(body, contains('Platform: unknown'));
+  });
+
+  // The app is public, so a bundled address or `mailto:` link would hand it to
+  // anyone who installs it or reads this repository. Contact goes through
+  // GitHub Issues; keep it that way.
   test('no email address or mailto: link is embedded in the app', () {
     final offenders = <String>[];
     final email = RegExp(r'[\w.+-]+@[\w-]+\.[\w.]+');
@@ -41,8 +49,7 @@ void main() {
     expect(
       offenders,
       isEmpty,
-      reason: 'Contact addresses must stay server-side:\n'
-          '${offenders.join('\n')}',
+      reason: 'No contact addresses in the app:\n${offenders.join('\n')}',
     );
   });
 }
