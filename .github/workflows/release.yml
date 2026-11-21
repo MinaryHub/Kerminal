@@ -239,7 +239,9 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    # A tag push, or a manual run (verify-version already required main and a
+    # new, matching version).
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     # Releases are published to this repository, where the source lives too
     # (MIT). These URLs must stay reachable without authentication:
     #
