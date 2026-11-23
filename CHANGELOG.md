@@ -5,6 +5,14 @@ All notable changes to Kerminal are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.2]
+
+### Changed
+- **문의가 두 갈래로 나뉩니다.** 설정 → Support 에서
+  - **Ask a question**: 질문·아이디어는 GitHub Discussions(Q&A)에 새 글로 올립니다.
+  - **Report a bug**: 버그는 GitHub Issues에 새 이슈로 올립니다.
+  두 화면 모두 앱 버전과 플랫폼이 미리 채워집니다.
+
 ## [1.6.1]
 
 ### Changed

@@ -1,9 +1,10 @@
 # Kerminal 개인정보처리방침 / Privacy Policy
 
-**최종 수정일 / Last updated: 2026-11-20**
+**최종 수정일 / Last updated: 2026-11-23**
 **제공자 / Provider: Minary**
-문의 / Contact: [GitHub Issues](https://github.com/MinaryHub/kerminal/issues)
-(앱 내 **설정 → Support → Contact us** 에서 바로 열 수 있습니다)
+문의 / Contact: 질문·의견은 [GitHub Discussions](https://github.com/MinaryHub/Kerminal/discussions),
+버그·요청은 [GitHub Issues](https://github.com/MinaryHub/kerminal/issues)
+(앱 내 **설정 → Support** 에서 바로 열 수 있습니다)
 
 ---
 
@@ -101,8 +102,8 @@ Kerminal은 서버 관리자를 위한 개발자 도구로, 아동을 대상으�
 
 ### 10. 문의
 
-Minary · https://github.com/MinaryHub/kerminal/issues
-(앱 내 **설정 → Support → Contact us**)
+Minary · https://github.com/MinaryHub/Kerminal/discussions ·
+https://github.com/MinaryHub/kerminal/issues (앱 내 **설정 → Support**)
 
 ---
 
@@ -192,5 +193,5 @@ release notes.
 
 ### 10. Contact
 
-Minary · https://github.com/MinaryHub/kerminal/issues
-(앱 내 **설정 → Support → Contact us**)
+Minary · https://github.com/MinaryHub/Kerminal/discussions ·
+https://github.com/MinaryHub/kerminal/issues (앱 내 **설정 → Support**)
