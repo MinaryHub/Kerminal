@@ -16,7 +16,17 @@ void main() {
     final body = uri.queryParameters['body']!;
     expect(body, contains('App: 1.6.1+57'));
     expect(body, contains('Platform: android'));
-    expect(body, contains('Issues are public'));
+    expect(body, contains('This is public'));
+  });
+
+  test('new discussion link opens the Q&A category with the environment', () {
+    final uri = newDiscussionUri(appVersion: '1.6.2+58', platform: 'windows');
+    expect(uri.toString(), startsWith('$kDiscussionsUrl/new?'));
+    expect(uri.queryParameters['category'], kQuestionCategory);
+    final body = uri.queryParameters['body']!;
+    expect(body, contains('App: 1.6.2+58'));
+    expect(body, contains('Platform: windows'));
+    expect(body, contains('This is public'));
   });
 
   test('unknown environment is stated rather than left blank', () {

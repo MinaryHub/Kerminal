@@ -291,8 +291,8 @@ class _PaletteOption extends StatelessWidget {
   }
 }
 
-/// Questions, bug reports and requests go to GitHub Issues. The "Contact us"
-/// button opens a new issue with the app version and platform filled in.
+/// Contact goes to GitHub: questions and ideas to Discussions, bugs to Issues.
+/// Both links open with the app version and platform filled in.
 class _SupportSection extends ConsumerWidget {
   const _SupportSection();
 
@@ -300,16 +300,18 @@ class _SupportSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final version = ref.watch(appVersionLabelProvider);
+    final platform = currentPlatformLabel();
+    void open(Uri uri) => launchUrl(uri, mode: LaunchMode.externalApplication);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Questions, bug reports and requests go to GitHub Issues '
-          '(a GitHub account is needed to post).',
+          'Questions and ideas go to GitHub Discussions, bugs to GitHub '
+          'Issues (a GitHub account is needed to post).',
         ),
         const SizedBox(height: 4),
         Text(
-          'Issues are public — never include passwords, keys or server '
+          'Both are public — never include passwords, keys or server '
           'addresses.',
           style: Theme.of(context)
               .textTheme
@@ -322,23 +324,18 @@ class _SupportSection extends ConsumerWidget {
           runSpacing: 8,
           children: [
             FilledButton.tonalIcon(
-              onPressed: () => launchUrl(
-                newIssueUri(
-                  appVersion: version,
-                  platform: currentPlatformLabel(),
-                ),
-                mode: LaunchMode.externalApplication,
-              ),
-              icon: const Icon(Icons.edit_note),
-              label: const Text('Contact us'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => launchUrl(
-                Uri.parse(kIssuesUrl),
-                mode: LaunchMode.externalApplication,
+              onPressed: () => open(
+                newDiscussionUri(appVersion: version, platform: platform),
               ),
               icon: const Icon(Icons.forum_outlined),
-              label: const Text('Browse issues'),
+              label: const Text('Ask a question'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => open(
+                newIssueUri(appVersion: version, platform: platform),
+              ),
+              icon: const Icon(Icons.bug_report_outlined),
+              label: const Text('Report a bug'),
             ),
           ],
         ),

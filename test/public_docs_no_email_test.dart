@@ -9,8 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// public — and it stays in that repo's git history even after removal.
 /// [support_links_test] guards `lib/` the same way; this covers the docs.
 ///
-/// A privacy policy still needs a contact route: GitHub Issues (Settings →
-/// Support → Contact us opens one) serves that without publishing anyone's
+/// A privacy policy still needs a contact route: GitHub Discussions and Issues
+/// (Settings → Support opens either) serve that without publishing anyone's
 /// address.
 void main() {
   test('published docs contain no email address', () {
@@ -34,7 +34,7 @@ void main() {
     expect(
       offenders,
       isEmpty,
-      reason: 'Use GitHub Issues instead of an address:\n'
+      reason: 'Use GitHub Discussions or Issues instead of an address:\n'
           '${offenders.join('\n')}',
     );
   });

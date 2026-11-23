@@ -40,7 +40,7 @@ VS Code를 쓴다면 `.vscode/launch.json`의 `args`에 `--dart-define=...`을 �
 
 ## 5. 문의 기능 (Edge Function) — 앱에서는 더 이상 사용하지 않음
 
-> **1.6.1부터 앱의 Contact us는 GitHub Issues로 연결됩니다.** 앱은 이 함수를 호출하지
+> **1.6.1부터 앱의 문의는 GitHub(Discussions·Issues)로 연결됩니다.** 앱은 이 함수를 호출하지
 > 않습니다. 이전 버전 앱 사용자를 위해 당분간 남겨 두고, 이전 버전이 충분히 줄면
 > `supabase functions delete send-feedback` 로 지워도 됩니다(`feedback` 테이블의 지난
 > 문의는 그대로 남습니다). 아래는 기존 설정 기록입니다.
