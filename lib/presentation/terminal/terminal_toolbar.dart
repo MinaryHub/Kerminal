@@ -24,7 +24,15 @@ import 'terminal_clipboard.dart';
 ///     `ssh_service.dart`), which is also what makes the Ctrl modifier possible
 ///     for characters typed on the *soft keyboard* — see [_armCtrl].
 class TerminalToolbar extends StatefulWidget {
-  const TerminalToolbar({required this.terminal, this.selection, super.key});
+  const TerminalToolbar({
+    required this.terminal,
+    this.selection,
+    this.onToggleKeyboard,
+    super.key,
+  });
+
+  /// Shows or hides the on-screen keyboard; null where there is none.
+  final VoidCallback? onToggleKeyboard;
 
   final Terminal terminal;
 
@@ -253,7 +261,6 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
     // Pinned: the keys a session leans on constantly. Ctrl leads because it is
     // the one key that unlocks all the others.
     final pinned = <Widget>[
-      if (_hasSelection) _icon(Icons.copy, 'Copy selected text', _copy),
       _CtrlChip(state: _ctrl, onTap: _cycleCtrl),
       // Ctrl+C is by far the most used combination (stop a command); one tap
       // instead of Ctrl, then the soft keyboard's c.
@@ -264,13 +271,21 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
           repeat: true),
       _key('Tab', 'Complete or indent', () => _tapKey(TerminalKey.tab)),
       _key('Esc', 'Escape', () => _tapKey(TerminalKey.escape)),
-      _icon(Icons.content_paste_go, 'Paste from clipboard', _paste),
+      // The pinned row is already as wide as a small phone allows, so Copy
+      // takes Paste's place while text is selected rather than adding a key.
+      if (_hasSelection)
+        _icon(Icons.copy, 'Copy selected text', _copy)
+      else
+        _icon(Icons.content_paste_go, 'Paste from clipboard', _paste),
     ];
 
     // Scrolling: still useful, but not on the critical path. Cursor movement
     // lives here because tapping the terminal is a workable alternative;
     // history has none.
     final rest = <Widget>[
+      if (widget.onToggleKeyboard != null)
+        _icon(Icons.keyboard_hide_outlined, 'Show or hide the keyboard',
+            widget.onToggleKeyboard!),
       _key('←', 'Left', () => _tapKey(TerminalKey.arrowLeft), repeat: true),
       _key('→', 'Right', () => _tapKey(TerminalKey.arrowRight), repeat: true),
       _key('|', 'Pipe', () => _tapText('|')),

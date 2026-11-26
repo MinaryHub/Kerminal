@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -197,7 +199,12 @@ class _TerminalTabsPageState extends ConsumerState<TerminalTabsPage> {
           ),
         ),
       ),
-      body: _terminalStack(sessions, index),
+      // A quick sideways swipe across the terminal switches tabs.
+      body: _SwipeToSwitch(
+        onNext: () => _onTabCommand(TabCommand.next),
+        onPrevious: () => _onTabCommand(TabCommand.previous),
+        child: _terminalStack(sessions, index),
+      ),
     );
   }
 
@@ -261,9 +268,27 @@ class _TerminalTabsPageState extends ConsumerState<TerminalTabsPage> {
             session: sessions[i],
             accent: sessionAccent(i),
             active: i == index,
+            onTabCommand: _onTabCommand,
           ),
       ],
     );
+  }
+
+  void _onTabCommand(TabCommand command) {
+    final sessions = ref.read(sessionsProvider);
+    if (sessions.isEmpty) return;
+    final n = sessions.length;
+    final index = _index.clamp(0, n - 1);
+    switch (command) {
+      case TabCommand.next:
+        if (n > 1) _select((index + 1) % n);
+      case TabCommand.previous:
+        if (n > 1) _select((index - 1 + n) % n);
+      case TabCommand.close:
+        _close(sessions[index].id, n);
+      case TabCommand.duplicate:
+        _duplicate(sessions[index]);
+    }
   }
 
   // ------------------------------------------------------------------- tabs
@@ -644,10 +669,89 @@ class _StatusDot extends StatelessWidget {
       SshConnectionStatus.failed => Colors.red,
       _ => Colors.grey,
     };
+    // A dropped connection shows a broken-link icon, not just a grey dot:
+    // colour alone is easy to miss on a small tab.
+    if (status == SshConnectionStatus.failed ||
+        status == SshConnectionStatus.closed) {
+      return Icon(
+        Icons.link_off,
+        size: 14,
+        color: color,
+        semanticLabel: 'Disconnected',
+      );
+    }
     return Container(
       width: 9,
       height: 9,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
+}
+
+/// Switches tabs on a quick horizontal swipe with one finger.
+///
+/// Watches raw pointers instead of joining the gesture arena, so the
+/// terminal's own scrolling, long-press selection and pinch keep working: a
+/// swipe must be short, fast and mostly sideways to count.
+class _SwipeToSwitch extends StatefulWidget {
+  const _SwipeToSwitch({
+    required this.onNext,
+    required this.onPrevious,
+    required this.child,
+  });
+
+  final VoidCallback onNext;
+  final VoidCallback onPrevious;
+  final Widget child;
+
+  @override
+  State<_SwipeToSwitch> createState() => _SwipeToSwitchState();
+}
+
+class _SwipeToSwitchState extends State<_SwipeToSwitch> {
+  static const _minDistance = 90.0;
+  static const _maxDrift = 40.0;
+  static const _maxDuration = Duration(milliseconds: 350);
+
+  int? _pointer;
+  Offset? _start;
+  DateTime? _startedAt;
+  int _down = 0;
+
+  void _onDown(PointerDownEvent e) {
+    _down++;
+    if (_down == 1 && e.kind == PointerDeviceKind.touch) {
+      _pointer = e.pointer;
+      _start = e.position;
+      _startedAt = DateTime.now();
+    } else {
+      _pointer = null; // A second finger: a pinch, not a swipe.
+    }
+  }
+
+  void _onUp(PointerUpEvent e) {
+    _down = (_down - 1).clamp(0, 1 << 20);
+    if (e.pointer != _pointer) return;
+    final start = _start!;
+    final elapsed = DateTime.now().difference(_startedAt!);
+    _pointer = null;
+    final d = e.position - start;
+    if (elapsed > _maxDuration) return;
+    if (d.dx.abs() < _minDistance || d.dy.abs() > _maxDrift) return;
+    // Content follows the finger: swiping left brings in the next tab.
+    d.dx < 0 ? widget.onNext() : widget.onPrevious();
+  }
+
+  void _onCancel(PointerCancelEvent e) {
+    _down = (_down - 1).clamp(0, 1 << 20);
+    if (e.pointer == _pointer) _pointer = null;
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+        onPointerDown: _onDown,
+        onPointerUp: _onUp,
+        onPointerCancel: _onCancel,
+        child: widget.child,
+      );
 }

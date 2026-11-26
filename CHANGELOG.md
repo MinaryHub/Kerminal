@@ -5,6 +5,21 @@ All notable changes to Kerminal are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.7.0]
+
+### Added
+- **휴대폰에서 좌우로 밀어 탭 전환**: 터미널을 빠르게 옆으로 밀면 다음/이전 탭으로 넘어갑니다.
+- **키보드 숨기기/보이기 버튼**: 툴바 오른쪽(스크롤 영역 맨 앞)에 있습니다. 출력을 읽을 때 키보드를 내려 보세요.
+- **탭 단축키**: Ctrl+Tab / Ctrl+Shift+Tab(또는 Ctrl+PgDn / PgUp)으로 탭 전환,
+  Ctrl+Shift+W 닫기, Ctrl+Shift+T 같은 서버로 새 탭. macOS는 ⌘⇧] / ⌘⇧[, ⌘W, ⌘T.
+  (Ctrl+W는 셸의 '단어 지우기'라 그대로 둡니다.)
+- **끊긴 연결에서 Enter = 다시 연결**.
+
+### Changed
+- 연결이 끊긴 탭은 회색 점 대신 **끊김 아이콘**으로, 터미널 위 안내도 눈에 띄는 색과
+  **Reconnect** 버튼으로 바꿨습니다.
+- 텍스트를 선택하면 **붙여넣기 키 자리에 복사 키**가 나타납니다(툴바 폭이 좁은 휴대폰 대응).
+
 ## [1.6.3]
 
 ### Added
