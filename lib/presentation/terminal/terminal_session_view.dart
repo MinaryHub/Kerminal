@@ -64,13 +64,22 @@ final Map<ShortcutActivator, Intent>? _terminalShortcuts =
 
 const _defaultFontSize = 14.0;
 
+/// Tab actions a terminal's keyboard shortcuts can ask its page for.
+enum TabCommand { next, previous, close, duplicate }
+
 class TerminalSessionView extends ConsumerStatefulWidget {
   const TerminalSessionView({
     required this.session,
     this.accent = Colors.teal,
     this.active = false,
+    this.onTabCommand,
     super.key,
   });
+
+  /// Handles tab shortcuts (switch, close, duplicate). The terminal has the
+  /// keyboard focus, so they have to be caught here before the shell gets
+  /// them.
+  final ValueChanged<TabCommand>? onTabCommand;
 
   final TerminalSession session;
 
@@ -120,6 +129,11 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
+    final command = _tabCommandFor(event.logicalKey);
+    if (command != null && widget.onTabCommand != null) {
+      widget.onTabCommand!(command);
+      return KeyEventResult.handled;
+    }
     final keyboard = HardwareKeyboard.instance;
     final modifier = defaultTargetPlatform == TargetPlatform.macOS
         ? keyboard.isMetaPressed
@@ -145,6 +159,55 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
+  }
+
+  /// Tab shortcuts, chosen not to collide with the shell:
+  ///   Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PgDn / Ctrl+PgUp  next / previous tab
+  ///   Ctrl+Shift+W  close tab    Ctrl+Shift+T  new tab to the same server
+  /// (plain Ctrl+W deletes a word in the shell, so it stays the shell's).
+  /// On macOS ⌘W / ⌘T and ⌘⇧] / ⌘⇧[ as in other Mac apps.
+  TabCommand? _tabCommandFor(LogicalKeyboardKey key) {
+    final kb = HardwareKeyboard.instance;
+    if (kb.isAltPressed) return null;
+    if (defaultTargetPlatform == TargetPlatform.macOS && kb.isMetaPressed) {
+      if (key == LogicalKeyboardKey.keyW && !kb.isShiftPressed) {
+        return TabCommand.close;
+      }
+      if (key == LogicalKeyboardKey.keyT && !kb.isShiftPressed) {
+        return TabCommand.duplicate;
+      }
+      if (kb.isShiftPressed && key == LogicalKeyboardKey.bracketRight) {
+        return TabCommand.next;
+      }
+      if (kb.isShiftPressed && key == LogicalKeyboardKey.bracketLeft) {
+        return TabCommand.previous;
+      }
+    }
+    if (!kb.isControlPressed) return null;
+    if (key == LogicalKeyboardKey.tab) {
+      return kb.isShiftPressed ? TabCommand.previous : TabCommand.next;
+    }
+    if (key == LogicalKeyboardKey.pageDown) return TabCommand.next;
+    if (key == LogicalKeyboardKey.pageUp) return TabCommand.previous;
+    if (kb.isShiftPressed && key == LogicalKeyboardKey.keyW) {
+      return TabCommand.close;
+    }
+    if (kb.isShiftPressed && key == LogicalKeyboardKey.keyT) {
+      return TabCommand.duplicate;
+    }
+    return null;
+  }
+
+  /// Shows or hides the on-screen keyboard. Reading output with half the
+  /// screen under the keyboard is the usual phone annoyance.
+  void _toggleKeyboard() {
+    final keyboardUp = View.of(context).viewInsets.bottom > 0;
+    if (keyboardUp) {
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    } else {
+      _focusNode.requestFocus();
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+    }
   }
 
   Future<void> _showTerminalMenu(Offset position) async {
@@ -308,6 +371,7 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
           child: TerminalToolbar(
             terminal: _controller.terminal,
             selection: _selection,
+            onToggleKeyboard: _useHardwareKeyboard ? null : _toggleKeyboard,
           ),
         ),
       ],
@@ -420,15 +484,21 @@ class _ReconnectBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Loud enough to notice at a glance: a dropped session that looks like a
+    // quiet one is how commands get typed into nothing.
+    final scheme = Theme.of(context).colorScheme;
     return MaterialBanner(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-      leading: const Icon(Icons.info_outline),
-      content: Text(message),
+      backgroundColor: scheme.errorContainer,
+      leading: Icon(Icons.link_off, color: scheme.onErrorContainer),
+      content: Text(
+        '$message  Press Enter or tap Reconnect.',
+        style: TextStyle(color: scheme.onErrorContainer),
+      ),
       actions: [
-        TextButton.icon(
+        FilledButton.icon(
           onPressed: onReconnect,
           icon: const Icon(Icons.refresh, size: 18),
-          label: const Text('Try again'),
+          label: const Text('Reconnect'),
         ),
       ],
     );

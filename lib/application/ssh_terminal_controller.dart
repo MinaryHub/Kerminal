@@ -158,15 +158,30 @@ class SshTerminalController extends ChangeNotifier {
               ? '\r\n[Connection closed]\r\n'
               : '\r\n[Session ended (exit $code)]\r\n',
         );
+        _offerEnterToReconnect();
       });
     } catch (e) {
       if (_disposed || generation != _generation) return;
       _errorMessage = _describe(e);
       terminal.write('\r\n[Connection failed] $_errorMessage\r\n');
       _setStatus(SshConnectionStatus.failed);
+      _offerEnterToReconnect();
     } finally {
       if (generation == _generation) _inFlight = null;
     }
+  }
+
+  /// After the link drops, Enter in the terminal dials again. Typing into a
+  /// dead tab otherwise went nowhere, and the reconnect button is a reach
+  /// away on a phone with the keyboard up.
+  void _offerEnterToReconnect() {
+    terminal.write('Press Enter to reconnect.\r\n');
+    terminal.onOutput = (data) {
+      if (data.contains('\r') || data.contains('\n')) {
+        terminal.onOutput = null;
+        reconnect();
+      }
+    };
   }
 
   /// Closes the live link and invalidates its callbacks.
