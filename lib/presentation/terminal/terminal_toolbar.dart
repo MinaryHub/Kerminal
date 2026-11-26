@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:xterm/xterm.dart';
+
+import 'terminal_clipboard.dart';
 
 /// A compact row of hard-to-type keys for the terminal (essential on mobile,
 /// handy on desktop).
@@ -20,9 +24,14 @@ import 'package:xterm/xterm.dart';
 ///     `ssh_service.dart`), which is also what makes the Ctrl modifier possible
 ///     for characters typed on the *soft keyboard* — see [_armCtrl].
 class TerminalToolbar extends StatefulWidget {
-  const TerminalToolbar({required this.terminal, super.key});
+  const TerminalToolbar({required this.terminal, this.selection, super.key});
 
   final Terminal terminal;
+
+  /// The terminal's selection. While something is selected a Copy key leads
+  /// the bar: phones can select text (long-press) but have no other way to
+  /// copy it.
+  final TerminalController? selection;
 
   @override
   State<TerminalToolbar> createState() => _TerminalToolbarState();
@@ -46,9 +55,46 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
   bool get _ctrlOn => _ctrl != _Mod.off;
 
   @override
+  void initState() {
+    super.initState();
+    widget.selection?.addListener(_onSelection);
+  }
+
+  @override
+  void didUpdateWidget(TerminalToolbar old) {
+    super.didUpdateWidget(old);
+    if (old.selection != widget.selection) {
+      old.selection?.removeListener(_onSelection);
+      widget.selection?.addListener(_onSelection);
+    }
+  }
+
+  @override
   void dispose() {
+    widget.selection?.removeListener(_onSelection);
     _restoreSink();
     super.dispose();
+  }
+
+  bool _hasSelection = false;
+
+  void _onSelection() {
+    final has = widget.selection?.selection != null;
+    if (has != _hasSelection && mounted) setState(() => _hasSelection = has);
+  }
+
+  Future<void> _copy() async {
+    final selection = widget.selection;
+    if (selection == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (await copySelection(widget.terminal, selection)) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Copied'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   // ------------------------------------------------------------------ input
@@ -117,6 +163,7 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
   }
 
   void _cycleCtrl() {
+    HapticFeedback.selectionClick();
     setState(() {
       switch (_ctrl) {
         case _Mod.off:
@@ -206,12 +253,15 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
     // Pinned: the keys a session leans on constantly. Ctrl leads because it is
     // the one key that unlocks all the others.
     final pinned = <Widget>[
+      if (_hasSelection) _icon(Icons.copy, 'Copy selected text', _copy),
       _CtrlChip(state: _ctrl, onTap: _cycleCtrl),
       // Ctrl+C is by far the most used combination (stop a command); one tap
       // instead of Ctrl, then the soft keyboard's c.
       _key('^C', 'Stop the running command (Ctrl+C)', () => _tapSeq('\x03')),
-      _key('↑', 'Previous command', () => _tapKey(TerminalKey.arrowUp)),
-      _key('↓', 'Next command', () => _tapKey(TerminalKey.arrowDown)),
+      _key('↑', 'Previous command', () => _tapKey(TerminalKey.arrowUp),
+          repeat: true),
+      _key('↓', 'Next command', () => _tapKey(TerminalKey.arrowDown),
+          repeat: true),
       _key('Tab', 'Complete or indent', () => _tapKey(TerminalKey.tab)),
       _key('Esc', 'Escape', () => _tapKey(TerminalKey.escape)),
       _icon(Icons.content_paste_go, 'Paste from clipboard', _paste),
@@ -221,16 +271,16 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
     // lives here because tapping the terminal is a workable alternative;
     // history has none.
     final rest = <Widget>[
-      _key('←', 'Left', () => _tapKey(TerminalKey.arrowLeft)),
-      _key('→', 'Right', () => _tapKey(TerminalKey.arrowRight)),
+      _key('←', 'Left', () => _tapKey(TerminalKey.arrowLeft), repeat: true),
+      _key('→', 'Right', () => _tapKey(TerminalKey.arrowRight), repeat: true),
       _key('|', 'Pipe', () => _tapText('|')),
       _key('~', 'Home directory', () => _tapText('~')),
       _key('/', 'Slash', () => _tapText('/')),
       _key('-', 'Dash', () => _tapText('-')),
       _key('Home', 'Start of line', () => _tapSeq('\x1b[H')),
       _key('End', 'End of line', () => _tapSeq('\x1b[F')),
-      _key('PgUp', 'Page up', () => _tapSeq('\x1b[5~')),
-      _key('PgDn', 'Page down', () => _tapSeq('\x1b[6~')),
+      _key('PgUp', 'Page up', () => _tapSeq('\x1b[5~'), repeat: true),
+      _key('PgDn', 'Page down', () => _tapSeq('\x1b[6~'), repeat: true),
     ];
 
     return Material(
@@ -266,8 +316,13 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
     );
   }
 
-  Widget _key(String label, String tooltip, VoidCallback onTap) =>
-      _Chip(onTap: onTap, tooltip: tooltip, child: Text(label));
+  Widget _key(
+    String label,
+    String tooltip,
+    VoidCallback onTap, {
+    bool repeat = false,
+  }) =>
+      _Chip(onTap: onTap, tooltip: tooltip, repeat: repeat, child: Text(label));
 
   Widget _icon(IconData icon, String tooltip, VoidCallback onTap) =>
       _Chip(onTap: onTap, tooltip: tooltip, child: Icon(icon, size: 20));
@@ -279,28 +334,82 @@ class _TerminalToolbarState extends State<TerminalToolbar> {
 const double _kKeySize = 44;
 const double _kBarHeight = 58;
 
-class _Chip extends StatelessWidget {
-  const _Chip({required this.child, required this.onTap, required this.tooltip});
+/// A toolbar key. Every press gives a light haptic tick: a key on glass has
+/// no travel, so without it people press twice to be sure.
+///
+/// With [repeat], holding the key repeats it like a physical keyboard does,
+/// for walking through history or moving the cursor. The tooltip then shows
+/// on hover only, since a long-press means "repeat".
+class _Chip extends StatefulWidget {
+  const _Chip({
+    required this.child,
+    required this.onTap,
+    required this.tooltip,
+    this.repeat = false,
+  });
 
   final Widget child;
   final VoidCallback onTap;
   final String tooltip;
+  final bool repeat;
+
+  @override
+  State<_Chip> createState() => _ChipState();
+}
+
+class _ChipState extends State<_Chip> {
+  static const _repeatEvery = Duration(milliseconds: 70);
+  Timer? _timer;
+
+  void _press() {
+    HapticFeedback.selectionClick();
+    widget.onTap();
+  }
+
+  void _startRepeat() {
+    _press();
+    _timer?.cancel();
+    _timer = Timer.periodic(_repeatEvery, (_) => widget.onTap());
+  }
+
+  void _stopRepeat() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopRepeat();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      // Touch users never hover, so make a long-press reveal it too.
-      triggerMode: TooltipTriggerMode.longPress,
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(_kKeySize, _kKeySize),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          visualDensity: VisualDensity.compact,
-        ),
-        child: child,
+    Widget button = OutlinedButton(
+      onPressed: _press,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(_kKeySize, _kKeySize),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        visualDensity: VisualDensity.compact,
       ),
+      child: widget.child,
+    );
+    if (widget.repeat) {
+      button = GestureDetector(
+        onLongPressStart: (_) => _startRepeat(),
+        onLongPressEnd: (_) => _stopRepeat(),
+        onLongPressCancel: _stopRepeat,
+        child: button,
+      );
+    }
+    return Tooltip(
+      message: widget.tooltip,
+      // Touch users never hover, so a long-press reveals it — except on keys
+      // where a long-press repeats.
+      triggerMode: widget.repeat
+          ? TooltipTriggerMode.manual
+          : TooltipTriggerMode.longPress,
+      child: button,
     );
   }
 }

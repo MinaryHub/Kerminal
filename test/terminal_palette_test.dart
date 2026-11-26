@@ -59,4 +59,20 @@ void main() {
       );
     }
   });
+
+  test('the view theme keeps typed text visible under the cursor', () {
+    for (final p in TerminalPalette.all) {
+      final view = p.viewTheme;
+      expect(view.cursor.a, closeTo(TerminalPalette.cursorOpacity, 0.01),
+          reason: p.id);
+      // Only the cursor changes.
+      expect(view.foreground, p.theme.foreground, reason: p.id);
+      expect(view.background, p.theme.background, reason: p.id);
+      expect(view.brightWhite, p.theme.brightWhite, reason: p.id);
+      expect(view.searchHitForeground, p.theme.searchHitForeground,
+          reason: p.id);
+      expect(identical(view, p.viewTheme), isTrue,
+          reason: 'cached, so the terminal is not repainted for nothing');
+    }
+  });
 }
