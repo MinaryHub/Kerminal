@@ -5,6 +5,11 @@ All notable changes to Kerminal are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+- **휴대폰에서 입력 중인 마지막 글자가 커서에 가려 보이지 않던 문제**를 고쳤습니다.
+  한글 조합 중인 글자나 키보드가 완성 중인 단어가 커서 블록 밑에 그려져 입력이
+  안 된 것처럼 보였습니다. 커서를 반투명하게 바꿔 아래 글자가 보이게 했습니다.
+
 ## [1.6.2]
 
 ### Changed

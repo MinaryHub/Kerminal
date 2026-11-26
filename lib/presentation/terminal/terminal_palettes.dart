@@ -48,6 +48,19 @@ class TerminalPalette {
 
   /// The palette stored under [id], or [fallback] when it is unknown (an older
   /// build, or a value from a newer one).
+  /// [theme] as the terminal view paints it: with a see-through cursor.
+  ///
+  /// xterm paints the cursor block over the cell under it, and also over the
+  /// text the keyboard is still composing (IME), which it draws at the cursor.
+  /// On phones that is the last thing typed — a Korean syllable before it is
+  /// committed, or Gboard's word in progress — so an opaque block hid it and
+  /// input looked lost. A translucent block keeps it readable.
+  TerminalTheme get viewTheme =>
+      _viewThemes[id] ??= withCursorOpacity(theme, cursorOpacity);
+
+  static const cursorOpacity = 0.45;
+  static final _viewThemes = <String, TerminalTheme>{};
+
   static TerminalPalette byId(String? id) {
     for (final p in all) {
       if (p.id == id) return p;
@@ -189,3 +202,32 @@ class TerminalPalette {
     searchHitForeground: Color(0xFF2E3440),
   );
 }
+
+/// A copy of [t] whose cursor colour has the given [opacity]. TerminalTheme
+/// has no copyWith, so every field is passed through explicitly.
+TerminalTheme withCursorOpacity(TerminalTheme t, double opacity) =>
+    TerminalTheme(
+      cursor: t.cursor.withValues(alpha: opacity),
+      selection: t.selection,
+      foreground: t.foreground,
+      background: t.background,
+      black: t.black,
+      white: t.white,
+      red: t.red,
+      green: t.green,
+      yellow: t.yellow,
+      blue: t.blue,
+      magenta: t.magenta,
+      cyan: t.cyan,
+      brightBlack: t.brightBlack,
+      brightRed: t.brightRed,
+      brightGreen: t.brightGreen,
+      brightYellow: t.brightYellow,
+      brightBlue: t.brightBlue,
+      brightMagenta: t.brightMagenta,
+      brightCyan: t.brightCyan,
+      brightWhite: t.brightWhite,
+      searchHitBackground: t.searchHitBackground,
+      searchHitBackgroundCurrent: t.searchHitBackgroundCurrent,
+      searchHitForeground: t.searchHitForeground,
+    );

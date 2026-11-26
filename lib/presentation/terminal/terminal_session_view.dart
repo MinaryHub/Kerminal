@@ -225,7 +225,7 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
                 focusNode: _focusNode,
                 autofocus: true,
                 hardwareKeyboardOnly: _useHardwareKeyboard,
-                theme: palette.theme,
+                theme: palette.viewTheme,
                 textStyle: TerminalStyle(fontSize: fontSize),
                 shortcuts: _terminalShortcuts,
                 onKeyEvent: _onKeyEvent,
