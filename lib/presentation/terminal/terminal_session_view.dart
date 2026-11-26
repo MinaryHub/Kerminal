@@ -12,6 +12,7 @@ import '../../application/settings.dart';
 import '../../application/ssh_terminal_controller.dart';
 import '../../domain/entities/ssh_connection_request.dart';
 import 'remote_files_sheet.dart';
+import 'terminal_clipboard.dart';
 import 'terminal_palettes.dart';
 import 'terminal_toolbar.dart';
 
@@ -89,6 +90,10 @@ class TerminalSessionView extends ConsumerStatefulWidget {
 class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
   final _focusNode = FocusNode(debugLabel: 'terminal');
 
+  /// The terminal's text selection, shared with the toolbar's Copy key and
+  /// the desktop right-click menu.
+  final _selection = TerminalController();
+
   SshTerminalController get _controller => widget.session.controller;
 
   @override
@@ -142,6 +147,63 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
     return KeyEventResult.ignored;
   }
 
+  Future<void> _showTerminalMenu(Offset position) async {
+    final terminal = _controller.terminal;
+    final hasSelection = _selection.selection != null;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'copy',
+          enabled: hasSelection,
+          child: const ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.copy),
+            title: Text('Copy'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'paste',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.content_paste),
+            title: Text('Paste'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'all',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.select_all),
+            title: Text('Select all'),
+          ),
+        ),
+      ],
+    );
+    switch (choice) {
+      case 'copy':
+        await copySelection(terminal, _selection);
+      case 'paste':
+        final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+        if (text != null && text.isNotEmpty) {
+          terminal.paste(text);
+          _selection.clearSelection();
+        }
+      case 'all':
+        selectVisible(terminal, _selection);
+    }
+    if (mounted) _focusNode.requestFocus();
+  }
+
   void _onStatusChanged() {
     // Only the visible tab may claim focus: several sessions can come up at
     // once (e.g. every tab redialling after the app returns from the
@@ -161,6 +223,7 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
   void dispose() {
     _controller.removeListener(_onStatusChanged);
     _focusNode.dispose();
+    _selection.dispose();
     super.dispose();
   }
 
@@ -222,7 +285,13 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
                   ref.read(settingsProvider.notifier).setFontSize(size),
               child: TerminalView(
                 _controller.terminal,
+                controller: _selection,
                 focusNode: _focusNode,
+                // Desktop: right-click for Copy / Paste / Select all. Touch
+                // copies through the toolbar's Copy key instead.
+                onSecondaryTapDown: _useHardwareKeyboard
+                    ? (details, _) => _showTerminalMenu(details.globalPosition)
+                    : null,
                 autofocus: true,
                 hardwareKeyboardOnly: _useHardwareKeyboard,
                 theme: palette.viewTheme,
@@ -235,7 +304,12 @@ class _TerminalSessionViewState extends ConsumerState<TerminalSessionView> {
         ),
         // Toolbar sends keys programmatically; exclude it from focus traversal
         // so tapping a key never steals keyboard focus from the terminal.
-        ExcludeFocus(child: TerminalToolbar(terminal: _controller.terminal)),
+        ExcludeFocus(
+          child: TerminalToolbar(
+            terminal: _controller.terminal,
+            selection: _selection,
+          ),
+        ),
       ],
     );
   }

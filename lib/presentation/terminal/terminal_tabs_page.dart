@@ -408,7 +408,34 @@ class _TerminalTabsPageState extends ConsumerState<TerminalTabsPage> {
     _select(ref.read(sessionsProvider).length - 1);
   }
 
-  void _close(String id, int count) {
+  /// Closes a tab. A live connection asks first: the close button sits next to
+  /// the tab you tap to switch, and one slip used to drop a running session.
+  Future<void> _close(String id, int count) async {
+    final session = ref
+        .read(sessionsProvider)
+        .where((s) => s.id == id)
+        .firstOrNull;
+    if (session != null && session.controller.isConnected) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Close ${session.request.displayName}?'),
+          content: const Text('This ends the connection.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+      count = ref.read(sessionsProvider).length;
+    }
     ref.read(sessionsProvider.notifier).close(id);
     if (count <= 1) {
       context.goNamed('hosts');
